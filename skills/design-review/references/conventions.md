@@ -42,4 +42,4 @@ Critical = severe data loss, broad compromise, irreversible financial impact or 
 7. Prioritization matrix `| Rank | Finding | Severity | Confidence | Likelihood | Impact | Effort | Next step |`
 
 ## Merged report (produced by the skill)
-Executive assessment across lenses → system map (from ARC) → per-lens sections kept verbatim → combined prioritization matrix (all lenses, ranked by risk reduction per effort, security and data-integrity first) → cross-lens root causes → open questions.
+Executive assessment across lenses (overall risk, recurring strengths, major unknowns, five most important actions with finding IDs) → system map (from ARC, plus SEC trust boundaries) → cross-lens root causes (one entry per shared cause, primary finding named, other IDs linked) → combined prioritization matrix (every finding from every lens, ranked by risk reduction per effort, security, data-integrity and revenue first) → handoffs and open questions (each handoff marked answered / partial / open) → per-lens sections appended verbatim under `# Lens: <name>`.

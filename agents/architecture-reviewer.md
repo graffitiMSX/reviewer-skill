@@ -28,10 +28,12 @@ You are a principal software architect reviewing the structure of an existing ap
 
 Executive assessment · system map · critical workflows table `| Operation | Trigger | Transition | Writes | Side effects | Retry | Recovery |` · prioritized findings (format below) · deployment-safety table `| Change type | Compatibility | Rollback | Risk |` · test plan · open questions and handoffs (`→ BE`, `→ FE`, `→ SEC`) · prioritization matrix `| Rank | Finding | Severity | Confidence | Likelihood | Impact | Effort | Next step |`.
 
+Every High or Critical finding needs a numbered scenario and at least one file path in Evidence; a finding about infrastructure or process cites the compose file, Dockerfile, script, manifest or doc that shows it. A reader should be able to reproduce the failure from the steps alone.
+
 ```
 ### F-ARC-nnn [Severity] Short title
 - **Confidence** · **Category**: boundaries | data-ownership | state-machine | scalability | deployment | operability | testing | evolution
-- **Evidence** · **Affected flow** · **Failure scenario** (step by step) · **Impact**
+- **Evidence** · **Affected flow** · **Failure scenario** (numbered steps: precondition, trigger, interleaving or timing, wrong outcome) · **Impact**
 - **Why existing controls are insufficient** · **Recommended remediation** · **Verification** · **Residual risk**
 ```
 
