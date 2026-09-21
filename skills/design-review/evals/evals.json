@@ -1,0 +1,25 @@
+{
+  "skill_name": "design-review",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "Faça um design review completo da aplicação AssinAi em /home/alexmarra/projects/rudolf/assinai (backend Express/Postgres/Redis/Stripe/S3, frontend React/Vite). Quero saber os riscos de produção: falhas de idempotência, dual writes, races, problemas de segurança e isolamento, fricção de UX, e o que priorizar.",
+      "expected_output": "Relatório consolidado com findings F-<LENS>-nnn, evidência em arquivo/símbolo, cenário de falha passo a passo, confiança rotulada, matriz de priorização combinada e handoffs entre lentes.",
+      "files": [],
+      "assertions": [
+        "Findings are numbered with lens-prefixed IDs F-ARC/BE/FE/UX/SEC-nnn",
+        "Every finding carries a Confidence label (Confirmed / Likely / Needs verification)",
+        "Every High or Critical finding cites at least one concrete repo file path as evidence",
+        "Every High or Critical finding has a step-by-step failure, attack or user scenario",
+        "Report contains a prioritization matrix table with Rank, Finding, Severity, Confidence, Effort columns",
+        "Backend coverage includes a consistency/idempotency matrix that mentions the Stripe webhook and the signing flow",
+        "Security coverage includes an authorization matrix table over endpoints or jobs",
+        "Coverage and blind spots are stated explicitly",
+        "No secret values from the repo's .env files appear in the report",
+        "Strengths (what is designed well) are listed, not only defects",
+        "Cross-lens handoffs or open questions are present",
+        "UX coverage includes a critical-flows table with step counts"
+      ]
+    }
+  ]
+}
