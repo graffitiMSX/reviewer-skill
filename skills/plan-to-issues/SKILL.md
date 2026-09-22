@@ -43,4 +43,9 @@ Stage 3 of the remediation pipeline. Reads `docs/remediation/action-plan.md`, wr
    ```bash
    python3 <this skill's directory>/scripts/create_issues.py docs/remediation/tickets.md --create [--milestone "<name>"] [--create-missing-labels]
    ```
+   To replace a run, for example after the repo's conventions change, preview and then delete the issues a tickets file created. Only open issues with no comments and a title the script wrote are deleted; the rest are listed and kept. Deleting is irreversible: get an explicit yes first.
+   ```bash
+   python3 <this skill's directory>/scripts/create_issues.py <old tickets.md> --delete-created --repo <owner/repo>
+   python3 <this skill's directory>/scripts/create_issues.py <old tickets.md> --delete-created --yes --repo <owner/repo>
+   ```
 6. **Report** the created issues table (ticket → `#number` → title) and offer `/dispatch-fixes` as the next stage.

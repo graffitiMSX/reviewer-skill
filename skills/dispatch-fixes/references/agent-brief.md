@@ -6,6 +6,7 @@
 Group ID: G-nn
 Group title:
 Goal:
+Lead issue: #n — [ACR-nnn] title (sets the branch and PR title)
 Included issues: #n, #n
 Excluded or deferred issues:
 Related findings: F-<LENS>-nnn
@@ -13,7 +14,7 @@ Affected components:
 Dependencies: (groups or PRs that must land first, or None)
 Conflict risk: low | medium | high — why
 Required expertise:
-Branch name: agent/g-nn-<short-description>
+Branch name: <prefix>/<lead-issue-number>-<short-description> per the repo convention (fallback: agent/g-nn-<short-description>)
 Agent assignment: fix-agent
 Implementation constraints:
 Shared acceptance criteria:
@@ -54,23 +55,25 @@ Implement the grouped fixes so that <risk> is removed or reduced without changin
 
 ## Branch and delivery
 - Repository: <absolute path>
-- Branch: `agent/g-nn-short-description`
-- Base branch: <default working branch>
-- Commit in reviewable units; open one PR targeting the base branch; link every issue.
+- Branch: `<prefix>/<lead-issue-number>-<short-description>`, e.g. `bugfix/351-jwt-type-confusion`
+- Base branch: <working branch, e.g. `claude`>
+- Commit messages: <repo format, e.g. `[BUG-351] fix: <description>`>
+- PR title: <repo format, e.g. `[BUG-351] <title>`>; the body lists every other issue in the group with `Closes #n` or `Refs #n`
+- Commit in reviewable units; open one PR targeting the base branch.
 
 ## Completion report
 Report using your completion format: files changed, tests executed and results, acceptance criteria status per issue, migration or rollout concerns, observability changes, known limitations and residual risks, PR number.
 ```
 
-## Issue comment after staged verification
+## Issue comment after verification on the promotion branch
 
 ```markdown
 Implemented in PR #<agent PR>.
 
 - Group: G-nn
 - Working-branch merge: PR #n or commit SHA
-- Stage promotion: PR #n or commit SHA
+- Promotion: PR #n or commit SHA into <promotion branch>
 - Verification: tests, checks, dashboard or smoke-test evidence, with timestamp
-- Environment: stage
+- Environment: <environment the promotion branch deploys>
 - Residual risk or follow-up: None, or explicit details
 ```

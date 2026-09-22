@@ -6,6 +6,7 @@ Usage:
   create_issues.py tickets.md --create        # create issues with gh
       [--repo owner/name] [--milestone NAME] [--create-missing-labels]
   create_issues.py tickets.md --fix-refs      # finish issues left with T-nn text or {number}
+  create_issues.py tickets.md --delete-created [--yes]   # preview, then delete this file's issues
 
 Format expected (written by the ticket-writer agent):
 
@@ -180,6 +181,46 @@ def append_mapping(path, tid, number):
     path.write_text(text, encoding="utf-8")
 
 
+def remove_mapping(path, tid):
+    text = path.read_text(encoding="utf-8")
+    text = re.sub(rf"^- {re.escape(tid)} → #\d+\n?", "", text, flags=re.M)
+    path.write_text(text, encoding="utf-8")
+
+
+def delete_created(tickets, created, repo_args, path, confirm):
+    """Delete issues this file created, only while they are untouched.
+
+    An issue is deleted only if it is open, has no comments, and its title is one
+    this script wrote. Anything else is listed and left alone. Without confirm,
+    nothing is deleted.
+    """
+    todo = [t for t in tickets if t["id"] in created]
+    deletable, kept = [], []
+    for t in todo:
+        num = created[t["id"]]
+        issue = json.loads(gh("issue", "view", str(num), "--json", "title,state,comments", *repo_args))
+        ours = {t["title"], fill_number(t["title"], None), fill_number(t["title"], num)}
+        reasons = []
+        if issue["state"] != "OPEN":
+            reasons.append(issue["state"].lower())
+        if issue["comments"]:
+            reasons.append(f"{len(issue['comments'])} comments")
+        if issue["title"] not in ours:
+            reasons.append("title changed")
+        (kept if reasons else deletable).append((t, num, reasons))
+    for t, num, reasons in kept:
+        print(f"keep   {t['id']} (#{num}): {', '.join(reasons)}")
+    if not confirm:
+        print(f"\n{len(deletable)} issues would be deleted, {len(kept)} kept. Add --yes to delete them.")
+        return
+    for t, num, _ in deletable:
+        gh("issue", "delete", str(num), "--yes", *repo_args)
+        remove_mapping(path, t["id"])
+        print(f"deleted {t['id']} (#{num})")
+        time.sleep(1)
+    print(f"\ndeleted {len(deletable)} issues, kept {len(kept)}")
+
+
 def write_temp(text):
     with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False, encoding="utf-8") as fh:
         fh.write(text)
@@ -275,6 +316,9 @@ def main():
     ap.add_argument("--create-missing-labels", action="store_true")
     ap.add_argument("--fix-refs", action="store_true",
                     help="finish created issues that still hold T-nn text or {number} placeholders")
+    ap.add_argument("--delete-created", action="store_true",
+                    help="delete the untouched issues this file created (preview unless --yes)")
+    ap.add_argument("--yes", action="store_true", help="confirm --delete-created")
     args = ap.parse_args()
     sys.stdout.reconfigure(line_buffering=True)
 
@@ -295,6 +339,9 @@ def main():
     repo_args = ["--repo", args.repo] if args.repo else []
     if args.fix_refs:
         sync_issues(ordered, created, repo_args)
+        return
+    if args.delete_created:
+        delete_created(ordered, created, repo_args, args.tickets, args.yes)
         return
     if not args.create:
         print(f"\ndry run: {len(ordered)} tickets, {len(created)} already created. Add --create to proceed.")
