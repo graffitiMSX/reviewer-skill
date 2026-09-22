@@ -26,12 +26,12 @@ git branch -r
 
 Read the repo's conventions from CLAUDE.md, CONTRIBUTING, `.github/` and workflow docs such as `docs/git_workflow.md`. Settle four things before grouping:
 
-- **Working branch.** This is where feature PRs merge. Compare the documented flow with the recent merged PRs. When they disagree, for example docs say `dev` but recent PRs merge into `claude`, ask the user which to use.
+- **Working branch.** Every branch, PR and merge in this stage uses the branch where the team's work actually lands. Never assume the repo default, and never trust a documented branch that nothing merges into. Rank the evidence: the base branch of recently merged PRs, then the branch with recent commits, then the documented flow. State the branch you picked and the evidence for it, for example "`claude`, the base of the last 20 merged PRs, while the documented `dev` last moved six months ago". Ask the user only when the evidence conflicts or nothing has merged recently. Once picked, it is the base of every group branch and the target of every agent PR.
 - **Promotion branch and its environment.** This is the branch the working branch is promoted to, such as `stage`, and the environment it deploys. In some repos that branch is production; the user or the project's docs say so.
 - **Branch naming.** Typically `<prefix>/<issue-number>-short-description`, with the prefix chosen by issue type, for example `bugfix/` for bugs and `tech/` for spikes, tech debt and technical improvements.
 - **Commit and PR titles.** Typically they start with the work-item ID, for example `[BUG-351] fix: reject typed JWTs`.
 
-If the repo defines none of these, use the fallback: branch `agent/g-nn-<short-desc>` from the default branch, and PR title `G-nn: <description>`.
+If the repo defines none of these, use the fallback: branch `agent/g-nn-<short-desc>` from the working branch you established, and PR title `G-nn: <description>`.
 
 Do not invent scope, owners or acceptance criteria; take them from the issues and the plan.
 
