@@ -7,6 +7,8 @@ Usage:
       [--repo owner/name] [--milestone NAME] [--create-missing-labels]
   create_issues.py tickets.md --fix-refs      # finish issues left with T-nn text or {number}
   create_issues.py tickets.md --delete-created [--yes]   # preview, then delete this file's issues
+  create_issues.py tickets.md --close-created [--superseded-by new.md] [--yes]
+                                              # preview, then close them as not planned
 
 Format expected (written by the ticket-writer agent):
 
@@ -187,16 +189,18 @@ def remove_mapping(path, tid):
     path.write_text(text, encoding="utf-8")
 
 
-def delete_created(tickets, created, repo_args, path, confirm):
-    """Delete issues this file created, only while they are untouched.
+def retire_created(tickets, created, repo_args, path, confirm, action, replacements=None):
+    """Delete or close the issues this file created, only while they are untouched.
 
-    An issue is deleted only if it is open, has no comments, and its title is one
+    An issue is retired only if it is open, has no comments, and its title is one
     this script wrote. Anything else is listed and left alone. Without confirm,
-    nothing is deleted.
+    nothing changes. Closing uses reason "not planned" and, when replacements maps
+    the same ticket IDs to newer issues, comments with the replacement number.
     """
-    todo = [t for t in tickets if t["id"] in created]
-    deletable, kept = [], []
-    for t in todo:
+    retirable, kept = [], []
+    for t in tickets:
+        if t["id"] not in created:
+            continue
         num = created[t["id"]]
         issue = json.loads(gh("issue", "view", str(num), "--json", "title,state,comments", *repo_args))
         ours = {t["title"], fill_number(t["title"], None), fill_number(t["title"], num)}
@@ -207,18 +211,25 @@ def delete_created(tickets, created, repo_args, path, confirm):
             reasons.append(f"{len(issue['comments'])} comments")
         if issue["title"] not in ours:
             reasons.append("title changed")
-        (kept if reasons else deletable).append((t, num, reasons))
+        (kept if reasons else retirable).append((t, num, reasons))
     for t, num, reasons in kept:
         print(f"keep   {t['id']} (#{num}): {', '.join(reasons)}")
+    verb = "deleted" if action == "delete" else "closed"
     if not confirm:
-        print(f"\n{len(deletable)} issues would be deleted, {len(kept)} kept. Add --yes to delete them.")
+        print(f"\n{len(retirable)} issues would be {verb}, {len(kept)} kept. Add --yes to proceed.")
         return
-    for t, num, _ in deletable:
-        gh("issue", "delete", str(num), "--yes", *repo_args)
-        remove_mapping(path, t["id"])
-        print(f"deleted {t['id']} (#{num})")
+    for t, num, _ in retirable:
+        if action == "delete":
+            gh("issue", "delete", str(num), "--yes", *repo_args)
+            remove_mapping(path, t["id"])
+        else:
+            new = (replacements or {}).get(t["id"])
+            note = (f"Superseded by #{new['number']}, the same work filed under this repo's issue conventions."
+                    if new else "Superseded by a new set of issues filed under this repo's issue conventions.")
+            gh("issue", "close", str(num), "--reason", "not planned", "--comment", note, *repo_args)
+        print(f"{verb} {t['id']} (#{num})")
         time.sleep(1)
-    print(f"\ndeleted {len(deletable)} issues, kept {len(kept)}")
+    print(f"\n{verb} {len(retirable)} issues, kept {len(kept)}")
 
 
 def write_temp(text):
@@ -318,7 +329,11 @@ def main():
                     help="finish created issues that still hold T-nn text or {number} placeholders")
     ap.add_argument("--delete-created", action="store_true",
                     help="delete the untouched issues this file created (preview unless --yes)")
-    ap.add_argument("--yes", action="store_true", help="confirm --delete-created")
+    ap.add_argument("--close-created", action="store_true",
+                    help="close the untouched issues this file created as not planned (preview unless --yes)")
+    ap.add_argument("--superseded-by", type=Path,
+                    help="with --close-created: tickets file whose issues replace these, matched by ticket ID")
+    ap.add_argument("--yes", action="store_true", help="confirm --delete-created or --close-created")
     args = ap.parse_args()
     sys.stdout.reconfigure(line_buffering=True)
 
@@ -341,7 +356,17 @@ def main():
         sync_issues(ordered, created, repo_args)
         return
     if args.delete_created:
-        delete_created(ordered, created, repo_args, args.tickets, args.yes)
+        retire_created(ordered, created, repo_args, args.tickets, args.yes, "delete")
+        return
+    if args.close_created:
+        replacements = {}
+        if args.superseded_by:
+            new_tickets, new_created, _ = parse(args.superseded_by)
+            missing = [t["id"] for t in new_tickets if t["id"] not in new_created]
+            if missing:
+                sys.exit("error: replacement issues not created yet for " + ", ".join(missing[:10]))
+            replacements = {tid: {"number": num} for tid, num in new_created.items()}
+        retire_created(ordered, created, repo_args, args.tickets, args.yes, "close", replacements)
         return
     if not args.create:
         print(f"\ndry run: {len(ordered)} tickets, {len(created)} already created. Add --create to proceed.")

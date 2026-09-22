@@ -43,9 +43,13 @@ Stage 3 of the remediation pipeline. Reads `docs/remediation/action-plan.md`, wr
    ```bash
    python3 <this skill's directory>/scripts/create_issues.py docs/remediation/tickets.md --create [--milestone "<name>"] [--create-missing-labels]
    ```
-   To replace a run, for example after the repo's conventions change, preview and then delete the issues a tickets file created. Only open issues with no comments and a title the script wrote are deleted; the rest are listed and kept. Deleting is irreversible: get an explicit yes first.
-   ```bash
-   python3 <this skill's directory>/scripts/create_issues.py <old tickets.md> --delete-created --repo <owner/repo>
-   python3 <this skill's directory>/scripts/create_issues.py <old tickets.md> --delete-created --yes --repo <owner/repo>
-   ```
+   To replace a run, for example after the repo's conventions change, create the new set first from a new tickets file that keeps the same `T-nn` IDs, then retire the old issues. Both retire modes preview by default and act only with `--yes`. They touch only open issues with no comments and a title the script wrote; the rest are listed and kept. Get an explicit yes before running either.
+   - **Close (default choice):** closes each old issue as "not planned" and comments with its replacement's number. Works with triage rights.
+     ```bash
+     python3 <this skill's directory>/scripts/create_issues.py <old tickets.md> --close-created --superseded-by <new tickets.md> --repo <owner/repo> [--yes]
+     ```
+   - **Delete:** irreversible. In an organization repo it needs an owner to allow issue deletion (Organization settings, Member privileges); repo admin alone gets "Viewer not authorized to delete".
+     ```bash
+     python3 <this skill's directory>/scripts/create_issues.py <old tickets.md> --delete-created --repo <owner/repo> [--yes]
+     ```
 6. **Report** the created issues table (ticket → `#number` → title) and offer `/dispatch-fixes` as the next stage.
