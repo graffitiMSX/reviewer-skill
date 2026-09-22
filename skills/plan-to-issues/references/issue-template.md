@@ -1,4 +1,6 @@
-# GitHub issue body template
+# Fallback GitHub issue body template
+
+Use this only when the target repo has no issue templates. When it has them, follow the chosen template's headings and append the sections below that it lacks: Traceability, Evidence, Acceptance Criteria, Verification Evidence, Rollout and Rollback, Residual Risk.
 
 Fill every section. Write "None" instead of leaving a section empty. Keep `A-nnn` and `F-<LENS>-nnn` IDs verbatim so the ticket stays traceable to the plan and the review.
 
