@@ -1,6 +1,7 @@
 import io, json, os, stat, tempfile, unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest import mock
 from harness.minify.hooks.format_turn import main
 from harness.minify.lib import events as E, unsafe as U
 
@@ -96,7 +97,10 @@ class TestGuards(Base):
         rc, out = self.run_hook()
         self.assertEqual(U.load(str(self.cwd), home=self.home), set())
         self.assertIn("unexpected token", out)
-        self.assertFalse(self.measures()[0]["formatter_ok"])
+        m = self.measures()[0]
+        self.assertFalse(m["formatter_ok"])
+        self.assertIsNone(m["tok_fmt"])
+        self.assertIsNone(m["chars_fmt"])
 
     def test_churn_outside_my_edit_is_reported(self):
         import subprocess
@@ -130,10 +134,58 @@ class TestGuards(Base):
         self.assertEqual(rc, 0)
         self.assertEqual(self.measures(), [])
 
+    def test_formatter_present_but_not_per_file_marks_unsafe(self):
+        # No node_modules/.bin/prettier or biome, and npx probing is forced to fail
+        # (lib.detect memoizes its npx probe in a module-level _NPX_OK, so the probe
+        # function itself must be patched -- patching shutil.which would not un-cache
+        # a True/False result set by an earlier test in this process), so detect()
+        # falls through to the package.json "format" script, which is per_file=False.
+        (self.cwd / "package.json").write_text(json.dumps({"scripts": {"format": "prettier --write ."}}))
+        (self.cwd / "src/api.ts").write_text("const a=1;\n")
+        self.log_write("src/api.ts")
+        with mock.patch("harness.minify.lib.detect._npx_prettier_ok", return_value=False):
+            rc, out = self.run_hook()
+        self.assertEqual(rc, 0)
+        self.assertEqual(U.load(str(self.cwd), home=self.home), {"ts"})
+        m = self.measures()[0]
+        self.assertFalse(m["formatter_ok"])
+        self.assertEqual(m["formatter"], "npm-script:format")
+        self.assertIn("not per-file", out.lower())
+        # untouched: a whole-project formatter must never be run on the session's say-so
+        self.assertEqual((self.cwd / "src/api.ts").read_text(), "const a=1;\n")
+
 class TestSafety(Base):
     def test_malformed_stdin_exits_zero(self):
         self.assertEqual(main("nonsense", home=self.home), 0)
         self.assertEqual(main("", home=self.home), 0)
+
+    def test_cwd_null_exits_zero(self):
+        payload = json.dumps({"session_id": "s1", "cwd": None})
+        self.assertEqual(main(payload, home=self.home), 0)
+
+    def test_cwd_int_exits_zero(self):
+        payload = json.dumps({"session_id": "s1", "cwd": 123})
+        self.assertEqual(main(payload, home=self.home), 0)
+
+    def test_cwd_list_exits_zero(self):
+        payload = json.dumps({"session_id": "s1", "cwd": []})
+        self.assertEqual(main(payload, home=self.home), 0)
+
+    def test_write_row_missing_file_field_does_not_stall_the_turn(self):
+        stub(self.cwd / "node_modules/.bin/prettier", SPACE_EQUALS)
+        (self.cwd / "src/api.ts").write_text("const a=1;\n")
+        # A malformed write row with no "file" key must be skipped during grouping,
+        # not abort it -- otherwise every file in the turn goes unprocessed and,
+        # because bump_turn() is never reached, the same malformed row would be
+        # re-encountered (and re-fail) on every subsequent Stop call.
+        E.append(str(self.cwd), "s1", {"k": "write", "turn": 1, "tool": "Write",
+                                       "ext": "ts", "class": "collapse", "tok": 0,
+                                       "chars": 0, "style": "minified"}, home=self.home)
+        self.log_write("src/api.ts")
+        rc, _ = self.run_hook()
+        self.assertEqual(rc, 0)
+        self.assertEqual([m["file"] for m in self.measures()], ["src/api.ts"])
+        self.assertEqual(E.current_turn(str(self.cwd), "s1", home=self.home), 2)
 
     def test_reentrant_call_is_skipped_by_the_lock(self):
         stub(self.cwd / "node_modules/.bin/prettier", SPACE_EQUALS)

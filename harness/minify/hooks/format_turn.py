@@ -20,7 +20,10 @@ def _files_this_turn(rows, turn):
     for r in rows:
         if r.get("k") != "write" or r.get("turn") != turn:
             continue
-        seen.setdefault(r["file"], []).append(r.get("tool", "?"))
+        f = r.get("file")
+        if not f:
+            continue  # malformed row must not abort grouping for the rest of the turn
+        seen.setdefault(f, []).append(r.get("tool", "?"))
     return seen
 
 def _emit(messages):
@@ -44,7 +47,8 @@ def _process_file(cwd, session, turn, rel, ops, k, home, messages):
     abspath = os.path.join(cwd, rel)
     if not os.path.isfile(abspath):
         return
-    ext = rel.rsplit(".", 1)[1].lower() if "." in rel else ""
+    basename = os.path.basename(rel)
+    ext = basename.rsplit(".", 1)[1].lower() if "." in basename else ""
     mine = Path(abspath).read_text(errors="replace")
     row = {"k": "measure",
            "ts": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
@@ -87,6 +91,8 @@ def main(stdin_text, home=None):
         d = json.loads(stdin_text or "")
         cwd = d["cwd"]
         session = d.get("session_id") or "unknown"
+        if not isinstance(cwd, str) or not cwd or not isinstance(session, str):
+            return 0
     except (ValueError, KeyError, TypeError):
         return 0
 
