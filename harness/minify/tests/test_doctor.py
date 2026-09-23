@@ -1,4 +1,5 @@
-import io, json, stat, subprocess, tempfile, unittest
+import contextlib, io, json, os, shlex, stat, subprocess, tempfile, unittest
+import unittest.mock as mock
 from contextlib import redirect_stdout
 from pathlib import Path
 from harness.minify.lib.doctor import one_line, verdict
@@ -12,6 +13,14 @@ def stub(path, body):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(body)
     path.chmod(path.stat().st_mode | stat.S_IEXEC)
+
+def recording_stub(path, log):
+    """A formatter stub that always reports clean, but first appends every argument it
+    received to `log` (one per line) plus an invocation marker -- so a test can assert
+    both how many times it ran and what paths it was actually handed."""
+    body = (f"#!/bin/sh\necho '---' >> {shlex.quote(str(log))}\n"
+            f"printf '%s\\n' \"$@\" >> {shlex.quote(str(log))}\nexit 0\n")
+    stub(path, body)
 
 def git_repo(root, files):
     subprocess.run(["git", "init", "-q"], cwd=root, check=True)
@@ -64,6 +73,84 @@ class TestVerdict(unittest.TestCase):
     def test_repo_clean_unknown_without_git(self):
         stub(self.cwd / "node_modules/.bin/prettier", CLEAN)
         self.assertIsNone(verdict(str(self.cwd), home=self.home)["repo_clean"])
+
+    def test_repo_clean_unknown_when_sample_is_clean_but_truncated(self):
+        """A clean sample is proof only when nothing was truncated. With MAX_CHECK forced
+        below the tracked count, a clean sample must report repo_clean=None (not True),
+        because a dirty file could be sitting in the untested remainder."""
+        git_repo(self.cwd, {"a.ts": "const a = 1;\n", "b.ts": "const b = 1;\n",
+                            "c.ts": "const c = 1;\n"})
+        stub(self.cwd / "node_modules/.bin/prettier", CLEAN)
+        with mock.patch("harness.minify.lib.doctor.MAX_CHECK", 2):
+            v = verdict(str(self.cwd), home=self.home)
+        self.assertIsNone(v["repo_clean"])
+        self.assertTrue(v["truncated"])
+        self.assertEqual(v["checked"], 2)
+        self.assertEqual(v["tracked_total"], 3)
+        self.assertGreater(v["tracked_total"], v["checked"])
+
+    def test_repo_clean_unknown_with_git_but_no_matching_tracked_files(self):
+        """A real git repo where nothing tracked matches a minifiable extension must land
+        in the unknown state with checked == 0, not be mistaken for a clean repo."""
+        git_repo(self.cwd, {"README.md": "hello\n"})
+        stub(self.cwd / "node_modules/.bin/prettier", CLEAN)
+        v = verdict(str(self.cwd), home=self.home)
+        self.assertIsNone(v["repo_clean"])
+        self.assertEqual(v["checked"], 0)
+
+    def test_repo_clean_unknown_when_probe_formatter_not_per_file(self):
+        """A per_file=False probe formatter inside a real git repo containing matching
+        files must still yield unknown -- distinct from the no-git-repo case, which the
+        prior (git-less) per_file=False test could not tell apart from this one."""
+        git_repo(self.cwd, {"a.ts": "const a=1;\n"})
+        (self.cwd / "package.json").write_text(json.dumps({"scripts": {"format": "prettier -w ."}}))
+        v = verdict(str(self.cwd), home=self.home)
+        self.assertIsNone(v["repo_clean"])
+        self.assertEqual(v["checked"], 0)
+
+    def test_check_many_runs_with_absolute_paths_regardless_of_process_cwd(self):
+        """The probe's subprocess has no cwd= of its own (lib/detect.py's check_many does
+        not take one), so the paths handed to it must already be absolute -- otherwise the
+        whole probe silently depends on the calling process's OS working directory equaling
+        the project root, which Task 11's CLI cannot guarantee."""
+        log = Path(self.tmp.name) / "argv.log"
+        recording_stub(self.cwd / "node_modules/.bin/prettier", log)
+        git_repo(self.cwd, {"a.ts": "const a = 1;\n"})
+        elsewhere = Path(self.tmp.name) / "elsewhere"
+        elsewhere.mkdir()
+        with contextlib.chdir(elsewhere):
+            v = verdict(str(self.cwd), home=self.home)
+        self.assertIs(v["repo_clean"], True)
+        text = log.read_text()
+        self.assertEqual(text.count("---"), 1)
+        # The stub's argv is the check command's own flags (e.g. "--check") plus the
+        # paths check_many appended; only the ".ts" arguments are paths to verify.
+        paths = [l for l in text.splitlines() if l.endswith(".ts")]
+        self.assertTrue(paths, "formatter stub recorded no .ts arguments")
+        for p in paths:
+            self.assertTrue(os.path.isabs(p), f"path handed to formatter was not absolute: {p!r}")
+        self.assertIn(str(self.cwd / "a.ts"), paths)
+
+    def test_one_line_mentions_cleanliness_unknown_for_untruncated_none(self):
+        """The non-truncated unknown state (no git repo here) keeps its plain wording,
+        distinct from the truncated-sample wording."""
+        stub(self.cwd / "node_modules/.bin/prettier", CLEAN)
+        v = verdict(str(self.cwd), home=self.home)
+        line = one_line(v)
+        self.assertIn("cleanliness unknown", line)
+        self.assertIn("new files only", line)
+        self.assertNotIn("checked", line)
+
+    def test_one_line_mentions_truncated_sample_size(self):
+        git_repo(self.cwd, {"a.ts": "const a = 1;\n", "b.ts": "const b = 1;\n",
+                            "c.ts": "const c = 1;\n"})
+        stub(self.cwd / "node_modules/.bin/prettier", CLEAN)
+        with mock.patch("harness.minify.lib.doctor.MAX_CHECK", 2):
+            v = verdict(str(self.cwd), home=self.home)
+        line = one_line(v)
+        self.assertIn("checked 2 of 3", line)
+        self.assertIn("cleanliness unknown", line)
+        self.assertIn("new files only", line)
 
     def test_non_per_file_formatter_is_blocked_not_safe(self):
         """A detected formatter that can only run whole-project (npm-script:format) must not

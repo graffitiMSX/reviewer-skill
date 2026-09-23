@@ -1,4 +1,4 @@
-import json, os, stat, tempfile, unittest
+import json, os, shlex, stat, tempfile, unittest
 import unittest.mock as mock
 from pathlib import Path
 from harness.minify.lib.detect import detect
@@ -7,6 +7,14 @@ def fake_bin(path, body="#!/bin/sh\nexit 0\n"):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(body)
     path.chmod(path.stat().st_mode | stat.S_IEXEC)
+
+def recording_bin(path, log):
+    """A formatter stub that always reports clean, but first appends every argument it
+    received to `log` (one per line) plus an invocation marker -- so a test can assert
+    both how many times it ran and what it was actually handed."""
+    body = (f"#!/bin/sh\necho '---' >> {shlex.quote(str(log))}\n"
+            f"printf '%s\\n' \"$@\" >> {shlex.quote(str(log))}\nexit 0\n")
+    fake_bin(path, body)
 
 class TestDetect(unittest.TestCase):
     def setUp(self):
@@ -83,12 +91,19 @@ class TestDetect(unittest.TestCase):
         self.assertEqual(out, "")
 
     def test_check_many_one_invocation_for_many_paths(self):
-        fake_bin(self.root / ".venv/bin/ruff")
+        """A stub that ignores argv can't tell one call from three sequential calls --
+        record what actually ran so the test can assert exactly one invocation happened
+        and all three paths were handed to it together."""
+        log = self.root / "invocations.log"
+        recording_bin(self.root / ".venv/bin/ruff", log)
         fmt = detect(str(self.root), "py")
         paths = [str(self.root / f"x{i}.py") for i in range(3)]
         ok, out = fmt.check_many(paths)
         self.assertTrue(ok)
-        self.assertEqual(out, "")
+        text = log.read_text()
+        self.assertEqual(text.count("---"), 1)
+        for p in paths:
+            self.assertIn(p, text)
 
     def test_check_many_reports_failure(self):
         fake_bin(self.root / ".venv/bin/ruff", "#!/bin/sh\necho 'not formatted' >&2\nexit 1\n")
