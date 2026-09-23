@@ -27,22 +27,30 @@ def main(stdin_text, home=None):
     except (ValueError, KeyError, TypeError):
         return 0
     try:
+        if not isinstance(cwd, str):
+            return 0
+        if not isinstance(tool_input, dict):
+            return 0
         payload = payload_of(tool, tool_input)
         raw = tool_input.get("file_path")
         if payload is None or not isinstance(raw, str) or not raw:
             return 0
         rel = os.path.relpath(raw, cwd) if os.path.isabs(raw) else raw
+        if os.path.isabs(rel) or rel == ".." or rel.startswith(".." + os.sep):
+            return 0
         cls = classify(rel)
         if cls == "exclude":
             return 0
         k, _ = load_k()
+        basename = os.path.basename(rel)
+        ext = basename.rsplit(".", 1)[1].lower() if "." in basename else ""
         E.append(cwd, session, {
             "k": "write",
             "ts": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
             "turn": E.current_turn(cwd, session, home),
             "tool": tool,
             "file": rel,
-            "ext": rel.rsplit(".", 1)[1].lower() if "." in rel else "",
+            "ext": ext,
             "class": cls,
             "chars": chars(payload),
             "tok": estimate(payload, k),
@@ -53,4 +61,8 @@ def main(stdin_text, home=None):
     return 0
 
 if __name__ == "__main__":
-    sys.exit(main(sys.stdin.read()))
+    try:
+        stdin_text = sys.stdin.read()
+    except Exception:
+        sys.exit(0)
+    sys.exit(main(stdin_text))

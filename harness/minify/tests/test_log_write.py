@@ -72,5 +72,36 @@ class TestMain(unittest.TestCase):
         main(hook_input(self.cwd, "Write", {"file_path": "src/api.ts", "content": "a"}), home=str(self.home))
         self.assertIsNone(self.rows()[0]["style"])
 
+    def test_absolute_path_outside_cwd_is_not_logged(self):
+        rc = main(hook_input(self.cwd, "Write", {"file_path": "/tmp/outside.ts", "content": "x"}),
+                  home=str(self.home))
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.rows(), [])
+
+    def test_relative_path_escaping_cwd_is_not_logged(self):
+        rc = main(hook_input(self.cwd, "Write", {"file_path": "../outside.ts", "content": "x"}),
+                  home=str(self.home))
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.rows(), [])
+
+    def test_file_named_dotdotfoo_inside_project_is_logged(self):
+        (self.cwd / "..foo.ts").write_text("content")
+        rc = main(hook_input(self.cwd, "Write", {"file_path": "..foo.ts", "content": "x"}),
+                  home=str(self.home))
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(self.rows()), 1)
+        self.assertEqual(self.rows()[0]["file"], "..foo.ts")
+
+    def test_non_dict_tool_input_exits_zero(self):
+        rc = main(hook_input(self.cwd, "Write", "not a dict"), home=str(self.home))
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.rows(), [])
+
+    def test_non_string_cwd_exits_zero(self):
+        stdin = json.dumps({"cwd": 123, "tool_name": "Write", "tool_input": {"file_path": "a.ts", "content": "x"}})
+        rc = main(stdin, home=str(self.home))
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.rows(), [])
+
 if __name__ == "__main__":
     unittest.main()
