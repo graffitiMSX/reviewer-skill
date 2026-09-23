@@ -1,0 +1,76 @@
+import json, tempfile, unittest
+from pathlib import Path
+from harness.minify.hooks.log_write import main, payload_of
+from harness.minify.lib import events as E
+
+def hook_input(cwd, tool, tool_input, session="s1"):
+    return json.dumps({"session_id": session, "cwd": str(cwd),
+                       "hook_event_name": "PostToolUse",
+                       "tool_name": tool, "tool_input": tool_input})
+
+class TestPayload(unittest.TestCase):
+    def test_write_uses_content(self):
+        self.assertEqual(payload_of("Write", {"file_path": "/a.ts", "content": "x=1"}), "x=1")
+    def test_edit_uses_new_string(self):
+        self.assertEqual(payload_of("Edit", {"file_path": "/a.ts", "old_string": "a", "new_string": "b"}), "b")
+    def test_unknown_tool_is_none(self):
+        self.assertIsNone(payload_of("Bash", {"command": "ls"}))
+    def test_never_reads_tool_result(self):
+        self.assertIsNone(payload_of("Write", {"file_path": "/a.ts"}))
+
+class TestMain(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.home = Path(self.tmp.name) / "home"
+        self.cwd = Path(self.tmp.name) / "proj"
+        (self.cwd / "src").mkdir(parents=True)
+        (self.home / ".claude").mkdir(parents=True)
+        (self.home / ".claude" / "settings.json").write_text(json.dumps({"outputStyle": "minified"}))
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def rows(self, session="s1"):
+        return E.read_session(str(self.cwd), session, home=str(self.home))
+
+    def test_logs_a_write_event(self):
+        rc = main(hook_input(self.cwd, "Write", {"file_path": "src/api.ts", "content": "const a=1;\n"}),
+                  home=str(self.home))
+        self.assertEqual(rc, 0)
+        r = self.rows()[0]
+        self.assertEqual(r["k"], "write")
+        self.assertEqual(r["file"], "src/api.ts")
+        self.assertEqual(r["ext"], "ts")
+        self.assertEqual(r["class"], "collapse")
+        self.assertEqual(r["tool"], "Write")
+        self.assertEqual(r["turn"], 1)
+        self.assertEqual(r["style"], "minified")
+        self.assertEqual(r["tok"], 7)
+        self.assertEqual(r["chars"], 11)
+
+    def test_absolute_path_is_stored_relative_to_cwd(self):
+        main(hook_input(self.cwd, "Write", {"file_path": str(self.cwd / "src/api.ts"), "content": "a"}),
+             home=str(self.home))
+        self.assertEqual(self.rows()[0]["file"], "src/api.ts")
+
+    def test_excluded_class_is_not_logged(self):
+        main(hook_input(self.cwd, "Write", {"file_path": "README.md", "content": "# hi"}), home=str(self.home))
+        self.assertEqual(self.rows(), [])
+
+    def test_non_write_tool_is_not_logged(self):
+        main(hook_input(self.cwd, "Bash", {"command": "ls"}), home=str(self.home))
+        self.assertEqual(self.rows(), [])
+
+    def test_malformed_stdin_exits_zero_and_logs_nothing(self):
+        self.assertEqual(main("not json at all", home=str(self.home)), 0)
+        self.assertEqual(main("", home=str(self.home)), 0)
+
+    def test_missing_cwd_exits_zero(self):
+        self.assertEqual(main(json.dumps({"tool_name": "Write", "tool_input": {}}), home=str(self.home)), 0)
+
+    def test_style_absent_is_recorded_as_none(self):
+        (self.home / ".claude" / "settings.json").write_text("{}")
+        main(hook_input(self.cwd, "Write", {"file_path": "src/api.ts", "content": "a"}), home=str(self.home))
+        self.assertIsNone(self.rows()[0]["style"])
+
+if __name__ == "__main__":
+    unittest.main()
