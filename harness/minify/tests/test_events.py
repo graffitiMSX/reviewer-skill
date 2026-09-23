@@ -1,4 +1,4 @@
-import json, tempfile, unittest
+import json, os, tempfile, unittest
 from pathlib import Path
 from harness.minify.lib import events as E
 
@@ -55,7 +55,51 @@ class TestEvents(unittest.TestCase):
         E.append(str(self.cwd), "s1", {"k": "write"}, home=str(self.home))
         E.append(str(self.cwd), "s2", {"k": "write"}, home=str(self.home))
         self.assertEqual(len(E.all_logs(str(self.cwd), home=str(self.home))), 2)
-        self.assertIn(E.latest_session(str(self.cwd), home=str(self.home)).stem, {"s1", "s2"})
+        # Set explicit, distinct mtimes: s1 at time 100, s2 at time 200
+        p1 = E.log_path(str(self.cwd), "s1", home=str(self.home))
+        p2 = E.log_path(str(self.cwd), "s2", home=str(self.home))
+        os.utime(p1, (100, 100))
+        os.utime(p2, (200, 200))
+        # latest_session must return s2 (the genuinely newer one)
+        self.assertEqual(E.latest_session(str(self.cwd), home=str(self.home)).stem, "s2")
+
+    def test_project_settings_only(self):
+        # Only the project's .claude/settings.json sets outputStyle
+        (self.cwd / ".claude" / "settings.json").write_text(json.dumps({"outputStyle": "minified"}))
+        self.assertEqual(E.active_style(str(self.cwd), home=str(self.home)), "minified")
+
+    def test_later_file_without_setting_does_not_erase(self):
+        # Global settings sets outputStyle, project-local exists but doesn't have it
+        (self.home / ".claude" / "settings.json").write_text(json.dumps({"outputStyle": "minified"}))
+        (self.cwd / ".claude" / "settings.local.json").write_text(json.dumps({"other": "value"}))
+        # Should still return the value from the global file
+        self.assertEqual(E.active_style(str(self.cwd), home=str(self.home)), "minified")
+
+    def test_active_style_skips_non_dict_settings(self):
+        # Settings file containing [] (valid JSON but not an object) should be skipped
+        (self.home / ".claude" / "settings.json").write_text(json.dumps([]))
+        (self.cwd / ".claude" / "settings.json").write_text(json.dumps({"outputStyle": "minified"}))
+        self.assertEqual(E.active_style(str(self.cwd), home=str(self.home)), "minified")
+
+    def test_read_skips_torn_multibyte_chars(self):
+        # A log file whose final line is torn mid multi-byte character
+        # should degrade gracefully, returning the earlier valid rows
+        p = E.log_path(str(self.cwd), "s1", home=str(self.home))
+        p.parent.mkdir(parents=True, exist_ok=True)
+        # Write valid JSON, then a torn UTF-8 sequence at the end
+        with open(p, "wb") as fh:
+            fh.write(b'{"k":"write","file":"valid"}\n{"k":"write","file":"caf\xc3')
+        rows = E.read(p)
+        # Should return only the valid row, skipping the torn one
+        self.assertEqual([r["k"] for r in rows], ["write"])
+        self.assertEqual(rows[0]["file"], "valid")
+
+    def test_current_turn_handles_null(self):
+        # State file containing {"turn": null} should degrade to 1
+        p = E._state_path(str(self.cwd), "s1", home=str(self.home))
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps({"turn": None}))
+        self.assertEqual(E.current_turn(str(self.cwd), "s1", home=str(self.home)), 1)
 
 if __name__ == "__main__":
     unittest.main()

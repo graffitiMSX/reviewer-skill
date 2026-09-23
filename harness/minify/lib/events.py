@@ -18,14 +18,14 @@ def log_path(cwd, session_id, home=None):
 def append(cwd, session_id, obj, home=None):
     p = log_path(cwd, session_id, home)
     p.parent.mkdir(parents=True, exist_ok=True)
-    with open(p, "a") as fh:
+    with open(p, "a", encoding="utf-8") as fh:
         fh.write(json.dumps(obj, separators=(",", ":")) + "\n")
 
 def read(path):
     """Read an NDJSON log, skipping malformed lines rather than failing."""
     rows = []
     try:
-        with open(path) as fh:
+        with open(path, encoding="utf-8", errors="replace") as fh:
             for line in fh:
                 line = line.strip()
                 if not line:
@@ -54,10 +54,15 @@ def _state_path(cwd, session_id, home=None):
 
 def current_turn(cwd, session_id, home=None):
     try:
-        with open(_state_path(cwd, session_id, home)) as fh:
-            return int(json.load(fh).get("turn", 1))
-    except (OSError, ValueError):
-        return 1
+        with open(_state_path(cwd, session_id, home), encoding="utf-8") as fh:
+            data = json.load(fh)
+            if isinstance(data, dict):
+                turn = data.get("turn")
+                if turn is not None:
+                    return int(turn)
+    except (OSError, ValueError, TypeError):
+        pass
+    return 1
 
 def bump_turn(cwd, session_id, home=None):
     n = current_turn(cwd, session_id, home) + 1
@@ -74,10 +79,12 @@ def active_style(cwd, home=None):
     style = None
     for p in paths:
         try:
-            with open(p) as fh:
-                v = json.load(fh).get("outputStyle")
-        except (OSError, ValueError):
+            with open(p, encoding="utf-8") as fh:
+                data = json.load(fh)
+                if isinstance(data, dict):
+                    v = data.get("outputStyle")
+                    if v:
+                        style = v
+        except (OSError, ValueError, AttributeError, TypeError):
             continue
-        if v:
-            style = v
     return style
