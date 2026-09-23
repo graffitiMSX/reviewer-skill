@@ -76,5 +76,43 @@ class TestDetect(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("embedded null byte", err)
 
+    def test_check_many_empty_list_is_clean(self):
+        fake_bin(self.root / ".venv/bin/ruff")
+        ok, out = detect(str(self.root), "py").check_many([])
+        self.assertTrue(ok)
+        self.assertEqual(out, "")
+
+    def test_check_many_one_invocation_for_many_paths(self):
+        fake_bin(self.root / ".venv/bin/ruff")
+        fmt = detect(str(self.root), "py")
+        paths = [str(self.root / f"x{i}.py") for i in range(3)]
+        ok, out = fmt.check_many(paths)
+        self.assertTrue(ok)
+        self.assertEqual(out, "")
+
+    def test_check_many_reports_failure(self):
+        fake_bin(self.root / ".venv/bin/ruff", "#!/bin/sh\necho 'not formatted' >&2\nexit 1\n")
+        fmt = detect(str(self.root), "py")
+        ok, out = fmt.check_many([str(self.root / "x.py")])
+        self.assertFalse(ok)
+        self.assertIn("not formatted", out)
+
+    def test_check_many_with_nul_byte_in_path_degrades_gracefully(self):
+        """An embedded NUL in one of the paths must not raise past check_many."""
+        fake_bin(self.root / ".venv/bin/ruff")
+        fmt = detect(str(self.root), "py")
+        ok, err = fmt.check_many([str(self.root / "x.py") + "\0bad"])
+        self.assertFalse(ok)
+        self.assertIn("embedded null byte", err)
+
+    def test_check_many_missing_executable_degrades_gracefully(self):
+        """A formatter whose binary vanished between detect() and use raises OSError (FileNotFoundError);
+        check_many must catch it, not propagate it."""
+        from harness.minify.lib.detect import Formatter
+        fmt = Formatter("ghost", ["/no/such/executable"], ["/no/such/executable"])
+        ok, err = fmt.check_many([str(self.root / "x.py")])
+        self.assertFalse(ok)
+        self.assertTrue(err)
+
 if __name__ == "__main__":
     unittest.main()

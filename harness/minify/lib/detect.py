@@ -27,6 +27,16 @@ class Formatter:
         """True when path is already formatter-clean."""
         return self._run(self._chk, path)
 
+    def check_many(self, paths):
+        """One invocation for many paths. Returns (all_clean, output)."""
+        if not paths:
+            return True, ""
+        try:
+            p = subprocess.run(self._chk + list(paths), capture_output=True, text=True, timeout=TIMEOUT)
+            return p.returncode == 0, (p.stderr or p.stdout or "").strip()
+        except (OSError, subprocess.SubprocessError, ValueError) as e:
+            return False, str(e)
+
 _NPX_OK = None
 
 def _npx_prettier_ok():
