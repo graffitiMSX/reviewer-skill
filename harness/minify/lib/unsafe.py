@@ -33,6 +33,6 @@ def clear(cwd, ext, home=None):
     del d[ext]
     try:
         path(cwd, home).write_text(json.dumps(d, indent=1, sort_keys=True))
+        return True
     except OSError:
-        pass
-    return True
+        return False

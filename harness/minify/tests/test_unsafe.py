@@ -57,17 +57,21 @@ class TestUnsafe(unittest.TestCase):
         self.assertEqual(U.load(self.cwd, home=self.home), set())
 
     def test_clear_degrades_when_write_fails(self):
+        import os
         # First, create a successful entry
         U.mark(self.cwd, "py", "reason", home=self.home)
         self.assertEqual(U.load(self.cwd, home=self.home), {"py"})
-        # Now make unsafe.json a directory to block write
+        # Make unsafe.json read-only to block write (but allow read)
         p = U.path(self.cwd, home=self.home)
-        p.unlink()
-        p.mkdir()
-        # clear() should not raise; since it can't read the corrupted file, it returns False (entry not found)
-        self.assertFalse(U.clear(self.cwd, "py", home=self.home))
-        # load() should still work and return empty (can't read corrupted directory-as-file)
-        self.assertEqual(U.load(self.cwd, home=self.home), set())
+        p.chmod(0o444)
+        try:
+            # clear() should not raise; write fails, so returns False
+            self.assertFalse(U.clear(self.cwd, "py", home=self.home))
+            # On-disk state must match return value: entry still present
+            self.assertEqual(U.load(self.cwd, home=self.home), {"py"})
+        finally:
+            # Restore write permission for temp directory cleanup
+            p.chmod(0o644)
 
     def test_clear_with_deleted_parent_returns_false(self):
         # Mark an extension
