@@ -46,16 +46,39 @@ class TestFormatterProofs(unittest.TestCase):
         if self.tool is None or not self.tool.per_file:
             self.skipTest("no per-file prettier available in this project")
 
-    def test_ts_pair_formats_to_the_same_thing(self):
-        a, _ = fmt_with(self.tool, (F / "api.readable.ts").read_text(), ".ts")
-        b, _ = fmt_with(self.tool, (F / "api.min.ts").read_text(), ".ts")
-        self.assertIsNotNone(a); self.assertIsNotNone(b)
-        self.assertEqual(a, b)
+    def test_ts_minified_formats_successfully(self):
+        """Formatting the minified version succeeds, proving the collapse did not break the language."""
+        minified, _ = fmt_with(self.tool, (F / "api.min.ts").read_text(), ".ts")
+        self.assertIsNotNone(minified, "minified TS must format cleanly")
 
-    def test_css_pair_formats_to_the_same_thing(self):
-        a, _ = fmt_with(self.tool, (F / "card.readable.css").read_text(), ".css")
-        b, _ = fmt_with(self.tool, (F / "card.min.css").read_text(), ".css")
-        self.assertEqual(a, b)
+    def test_ts_formatted_matches_golden(self):
+        """Formatting the minified version produces the expected golden result."""
+        minified, _ = fmt_with(self.tool, (F / "api.min.ts").read_text(), ".ts")
+        golden = (F / "api.formatted.ts").read_text()
+        self.assertEqual(minified, golden)
+
+    def test_ts_golden_is_idempotent(self):
+        """Formatting the golden again returns the golden unchanged."""
+        golden = (F / "api.formatted.ts").read_text()
+        reformatted, _ = fmt_with(self.tool, golden, ".ts")
+        self.assertEqual(reformatted, golden)
+
+    def test_css_minified_formats_successfully(self):
+        """Formatting the minified version succeeds, proving the collapse did not break the language."""
+        minified, _ = fmt_with(self.tool, (F / "card.min.css").read_text(), ".css")
+        self.assertIsNotNone(minified, "minified CSS must format cleanly")
+
+    def test_css_formatted_matches_golden(self):
+        """Formatting the minified version produces the expected golden result."""
+        minified, _ = fmt_with(self.tool, (F / "card.min.css").read_text(), ".css")
+        golden = (F / "card.formatted.css").read_text()
+        self.assertEqual(minified, golden)
+
+    def test_css_golden_is_idempotent(self):
+        """Formatting the golden again returns the golden unchanged."""
+        golden = (F / "card.formatted.css").read_text()
+        reformatted, _ = fmt_with(self.tool, golden, ".css")
+        self.assertEqual(reformatted, golden)
 
     def test_asi_collapsed_js_fails_to_format(self):
         out, err = fmt_with(self.tool, (F / "asi.collapsed.js").read_text(), ".js")

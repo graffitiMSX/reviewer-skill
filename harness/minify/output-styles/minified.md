@@ -44,7 +44,9 @@ Verdicts (by state):
 
 Collapse to one line wherever it stays legal. Use `;` separators, no blank lines, no
 indentation. Never join lines that rely on automatic semicolon insertion — add the
-explicit `;` instead, or leave the break in.
+explicit `;` instead, or leave the break in. The formatter normalizes indentation
+and line breaks but does not restore blank lines or brace style, so removing them is
+a permanent change to the file rather than a round trip.
 
 ```
 export async function sync(id,o={}){const r=await fetch(`/api/${id}`,{method:"POST"});if(!r.ok)throw new Error(`fail ${r.status}`);const d=await r.json();return{id,items:d.items??[],at:Date.now()}}
