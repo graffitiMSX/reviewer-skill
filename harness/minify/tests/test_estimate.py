@@ -55,5 +55,45 @@ class TestEstimate(unittest.TestCase):
             p.write_text(json.dumps({"k": 1.07, "calibrated": True}))
             self.assertEqual(load_k(str(p)), (1.07, True))
 
+    def test_load_k_with_json_list(self):
+        """Finding 1: malformed JSON shape (list instead of dict) should not raise."""
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "calibration.json"
+            p.write_text(json.dumps([1, 2, 3]))
+            self.assertEqual(load_k(str(p)), (1.0, False))
+
+    def test_load_k_with_null_k(self):
+        """Finding 1: null k value should not raise TypeError."""
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "calibration.json"
+            p.write_text(json.dumps({"k": None, "calibrated": True}))
+            self.assertEqual(load_k(str(p)), (1.0, False))
+
+    def test_load_k_with_invalid_json_syntax(self):
+        """Finding 1: syntactically invalid JSON should not raise."""
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "calibration.json"
+            p.write_text("{not valid json")
+            self.assertEqual(load_k(str(p)), (1.0, False))
+
+    def test_unicode_word_stays_one_run(self):
+        """Finding 2: Unicode word characters should be one run, not split on accents."""
+        self.assertEqual(estimate("café"), 1)
+        self.assertEqual(estimate("cafe"), 1)
+
+    def test_crlf_is_one_newline(self):
+        """Finding 2: CRLF should be counted as exactly one newline token."""
+        self.assertEqual(estimate("\r\n"), 1)
+        self.assertEqual(estimate("\r\n\r\n\r\n"), 3)
+
+    def test_lone_carriage_return(self):
+        """Finding 2: lone CR should not be silently dropped; counted as whitespace."""
+        self.assertEqual(estimate("\r"), 1)
+
+    def test_goldens_after_unicode_fix(self):
+        """Finding 2: re-assert goldens after regex and newline changes."""
+        self.assertEqual(estimate("const a=1;\n"), 7)
+        self.assertEqual(estimate("const a = 1;\n"), 9)
+
 if __name__ == "__main__":
     unittest.main()

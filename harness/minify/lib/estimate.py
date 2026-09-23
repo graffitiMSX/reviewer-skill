@@ -2,7 +2,7 @@
 because both sides of every comparison use this same function."""
 import json, os, re
 
-RUN = re.compile(r"[A-Za-z_$][A-Za-z0-9_$]*|\d+|\n|[ \t\r\f\v]+|[^\sA-Za-z0-9_$]+")
+RUN = re.compile(r"(?:[^\W\d]|\$)[\w$]*|\d+|\r?\n|[ \t\r\f\v]+|[^\sA-Za-z0-9_$]+")
 DEFAULT_CALIBRATION = os.path.join(os.path.dirname(__file__), "calibration.json")
 
 def _r(x):
@@ -10,7 +10,7 @@ def _r(x):
     return int(x + 0.5)
 
 def _run_tokens(run):
-    if run == "\n":
+    if run.endswith("\n"):
         return 1
     c = run[0]
     n = len(run)
@@ -38,6 +38,8 @@ def load_k(path=None):
     try:
         with open(path) as fh:
             d = json.load(fh)
+        if not isinstance(d, dict):
+            return 1.0, False
         return float(d.get("k", 1.0)), bool(d.get("calibrated", False))
-    except (OSError, ValueError):
+    except (OSError, ValueError, TypeError, AttributeError):
         return 1.0, False
