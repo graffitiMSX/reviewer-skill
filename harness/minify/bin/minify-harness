@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+"""Report what minified emission saved, and what is safe to minify here."""
+import argparse, os, sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from harness.minify.lib import events as E, unsafe as U
+from harness.minify.lib.doctor import verdict
+from harness.minify.lib.report import by_lang, dedupe, measures, render
+
+def _report(args, home, cwd):
+    if args.all:
+        paths, scope = E.all_logs(cwd, home), f"ALL SESSIONS  {os.path.basename(cwd)}"
+    else:
+        p = E.latest_session(cwd, home)
+        paths = [p] if p else []
+        scope = f"SESSION {p.stem[:8] if p else '-'}"
+    rows = measures(paths)
+    if args.by_lang:
+        groups = by_lang(dedupe(rows))
+        if not groups:
+            print(f"{scope}\n\n  no measurements yet")
+            return 0
+        print(scope, "\n")
+        print(f"  {'ext':6} {'files':>5} {'tok_min':>8} {'tok_fmt':>8} {'saved':>7}")
+        for g in groups:
+            pct = round(100 * g["saved"] / g["tok_fmt"]) if g["tok_fmt"] else 0
+            print(f"  {g['ext']:6} {g['files']:5} {g['tok_min']:8} {g['tok_fmt']:8} {g['saved']:6} {pct:3}%")
+        return 0
+    print(render(rows, scope=scope, chars=args.chars, turns=args.turns), end="")
+    return 0
+
+def _doctor(args, home, cwd):
+    if args.clear:
+        if U.clear(cwd, args.clear, home=home):
+            print(f"cleared .{args.clear} from unsafe.json")
+            return 0
+        print(f"could not clear .{args.clear} — it was not marked unsafe, or the registry could not be written")
+        return 1
+    v = verdict(cwd, home=home)
+    print(f"project  {cwd}")
+    for ext in sorted(v["formatters"]):
+        state = "safe" if ext in v["safe"] else f"NOT safe ({v['blocked'][ext]})"
+        print(f"  {ext:6} {str(v['formatters'][ext] or '-'):28} {state}")
+    clean = {True: "yes", False: "no", None: "unknown"}[v["repo_clean"]]
+    if v["truncated"]:
+        checked_str = f"checked {v['checked']} of {v['tracked_total']}"
+    else:
+        checked_str = f"{v['checked']} files checked"
+    print(f"\nrepo formatter-clean: {clean} ({checked_str})")
+    print(f"minify-safe: {' '.join(v['safe']) or 'none'}")
+    return 0
+
+def main(argv, home=None, cwd=None):
+    cwd = cwd or os.getcwd()
+    ap = argparse.ArgumentParser(prog="minify-harness")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    r = sub.add_parser("report")
+    r.add_argument("--all", action="store_true")
+    r.add_argument("--turns", action="store_true")
+    r.add_argument("--by-lang", dest="by_lang", action="store_true")
+    r.add_argument("--chars", action="store_true")
+    d = sub.add_parser("doctor")
+    d.add_argument("--clear", metavar="EXT")
+    args = ap.parse_args(argv)
+    return _report(args, home, cwd) if args.cmd == "report" else _doctor(args, home, cwd)
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
