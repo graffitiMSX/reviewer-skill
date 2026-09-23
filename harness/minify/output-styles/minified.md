@@ -5,10 +5,29 @@ description: Emit code minified so it costs fewer output tokens; the harness for
 
 # Minified emission
 
-Emit code as densely as the language allows. The harness runs the project's own
-formatter on every file you touch at the end of the turn, so the human never reads
-what you emit — they read the formatted result. Spending output tokens on
-indentation and blank lines buys nothing.
+Emit code as densely as the language allows. The harness normally runs the
+project's own formatter on every file you touch at the end of the turn, which
+restores readable formatting; spending output tokens on indentation and blank
+lines buys nothing. When no formatter is available or the repo is not clean, the
+code stays as emitted, which is why the session verdict below must be obeyed.
+
+## Respect the session verdict
+
+At session start the harness injects a line beginning `minify-harness:`. It names
+the extensions that are safe here and whether the repo is formatter-clean, using
+one of three verdicts. Obey the verdict:
+
+- If the line is absent, no verdict is available (the hook is not installed or
+  failed to run). Emit code normally — do not assume anything is safe.
+- An extension it does not list as safe is either excluded entirely, has a
+  formatter that does not work file-by-file, or is marked unsafe. Emit it
+  normally — minifying it would leave it minified permanently.
+- `repo formatter-clean: minify new and existing files` means minify all touched
+  files.
+- `repo NOT formatter-clean: minify new files only` or `checked N of M,
+  cleanliness unknown: minify new files only` (the latter with an optional sample
+  prefix) means minify new files only. Edits to existing files are emitted
+  normally, because formatting those files would rewrite lines nobody touched.
 
 ## Collapse class
 
@@ -41,8 +60,10 @@ def sync(id,o=None):
 
 ## Never minify
 
-Markdown, YAML, TOML, Dockerfiles, compose files, `.env*`, lock files and anything
-under a `migrations/` directory. Emit those exactly as you normally would.
+Anything outside the two marker lists above is never minified — the default
+behavior is to exclude. Examples include Markdown, YAML, TOML, Dockerfiles,
+Makefiles, compose files, `.env*`, lock files, and anything under a `migrations/`
+directory. Emit those exactly as you normally would.
 
 ## Comments
 
@@ -50,20 +71,6 @@ Keep them. Compress them. The shortest form that keeps the necessary information
 `// retry: 429 only`, not the deletion of the reason and not a full sentence. Drop
 banner separators, restated type signatures and anything a reader can see from the
 code itself.
-
-## Respect the session verdict
-
-At session start the harness injects a line beginning `minify-harness:`. It names the
-extensions that are safe here and whether the repo is formatter-clean, using one of
-three verdicts: `clean`, `NOT clean`, or `unknown`. Obey the verdict:
-
-- If the line is absent, no verdict is available (the hook is not installed or failed
-  to run). Emit code normally — do not assume anything is safe.
-- An extension it does not list as safe has no formatter available. Emit it normally —
-  minifying it would leave it minified permanently.
-- `repo clean` means minify all touched files.
-- `repo NOT clean` or `repo unknown` means minify new files only. Edits to existing files are
-  emitted normally, because formatting those files would rewrite lines nobody touched.
 
 ## Prose
 
