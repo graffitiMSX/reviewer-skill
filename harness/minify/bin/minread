@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Print a dense form of a file. For orientation, not for sourcing Edit strings."""
+"""Print a dense form of a file. For orientation, not for sourcing Edit strings.
+
+WARNING: The dense form can alter multi-line string contents by re-indenting their
+interior lines. The dense form must not be used as a basis for rewriting a file with
+Write or any other tool — re-read the real file first."""
 import sys
 from pathlib import Path
 
@@ -16,7 +20,10 @@ def main(argv):
     except OSError as e:
         print(f"minread: {e}", file=sys.stderr)
         return 1
-    sys.stdout.write(densify(text, str(p)))
+    result, unclosed_block = densify(text, str(p))
+    if unclosed_block:
+        print(f"minread: {p}: unclosed block comment, remainder left unstripped", file=sys.stderr)
+    sys.stdout.write(result)
     return 0
 
 if __name__ == "__main__":
