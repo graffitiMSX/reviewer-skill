@@ -8,8 +8,9 @@ description: Emit code minified so it costs fewer output tokens; the harness for
 Emit code as densely as the language allows. The harness normally runs the
 project's own formatter on every file you touch at the end of the turn, which
 restores readable formatting; spending output tokens on indentation and blank
-lines buys nothing. When no formatter is available or the repo is not clean, the
-code stays as emitted, which is why the session verdict below must be obeyed.
+lines buys nothing. When no formatter is available, the formatter fails, or the
+repo is not clean, the code stays as emitted, which is why the session verdict below
+must be obeyed.
 
 ## Respect the session verdict
 

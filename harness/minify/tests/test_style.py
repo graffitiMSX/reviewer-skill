@@ -33,8 +33,19 @@ class TestStyle(unittest.TestCase):
         self.assertIn("minify-harness:", STYLE.read_text())
 
     def test_all_four_verdict_renderings_are_quoted(self):
-        """Check that the style quotes all four verdicts produced by one_line()."""
+        """Check that the style quotes all four verdicts produced by one_line().
+
+        This test ensures the style document contains the exact rule strings that
+        doctor.one_line() produces, so an assistant can match tokens against hook
+        output. The test derives all strings from one_line() without hardcoding,
+        and verifies the plain unknown form appears at least twice (standalone and
+        as tail of sampled form) to guard against accidental deletion.
+        """
         text = STYLE.read_text()
+
+        # Normalize whitespace in the style: collapse all runs to single spaces.
+        # This handles the sampled rendering which wraps across physical lines.
+        text_normalized = " ".join(text.split())
 
         # Generate all four verdict renderings from doctor.one_line()
         verdicts = [
@@ -44,17 +55,35 @@ class TestStyle(unittest.TestCase):
             {"repo_clean": None, "safe": [], "blocked": [], "checked": 0, "tracked_total": 0, "truncated": False},
         ]
 
+        # Extract all four rules from one_line() without branching or hardcoding
+        rules = []
         for verdict in verdicts:
             line = one_line(verdict)
-            # Extract just the rule part (after the last |)
             rule = line.split(" | ")[-1]
-            # For the sampled case, check that the pattern is present (N and M will vary)
-            if "checked" in rule:
-                self.assertIn("checked", text, f"Style should mention 'checked' for sampled verdicts")
-                self.assertIn("cleanliness unknown:", text, f"Style should quote the 'cleanliness unknown:' token")
-            else:
-                # For non-sampled verdicts, check the exact rule string
-                self.assertIn(rule, text, f"Style should quote verdict: {rule}")
+            rules.append(rule)
+
+        # Normalize numeric placeholder: replace actual numbers with fixed token.
+        # The hook emits "checked 200 of 912," and the style writes "checked N of M,".
+        # We normalize both to "checked N of M," so they match after normalization.
+        def normalize_checked(s):
+            return re.sub(r"checked \d+ of \d+,", "checked N of M,", s)
+
+        rules_normalized = [normalize_checked(r) for r in rules]
+        text_normalized = normalize_checked(text_normalized)
+
+        # Verify each rule is in the normalized text, without hardcoding literals
+        for i, rule_norm in enumerate(rules_normalized, 1):
+            self.assertIn(rule_norm, text_normalized,
+                f"Rule {i} not found in style: {rule_norm}")
+
+        # The plain unknown form (rules[3]) must appear at least twice:
+        # once as a standalone line and once as the tail of the sampled form.
+        # If someone deletes the standalone line, the count drops to 1 and this fails.
+        plain_unknown = rules_normalized[3]
+        count = text_normalized.count(plain_unknown)
+        self.assertGreaterEqual(count, 2,
+            f"Plain unknown verdict must appear at least twice (standalone + sampled tail), "
+            f"but found {count} occurrences: {plain_unknown}")
 
 if __name__ == "__main__":
     unittest.main()
