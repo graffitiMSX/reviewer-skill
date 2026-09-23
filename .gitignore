@@ -2,3 +2,5 @@ skills/*-workspace/
 docs/
 __pycache__/
 *.pyc
+.claude/worktrees/
+.superpowers/
