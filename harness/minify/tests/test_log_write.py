@@ -103,5 +103,27 @@ class TestMain(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertEqual(self.rows(), [])
 
+    def test_relative_path_with_dotdot_in_middle_escaping_cwd_is_not_logged(self):
+        rc = main(hook_input(self.cwd, "Write", {"file_path": "src/../../outside.ts", "content": "x"}),
+                  home=str(self.home))
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.rows(), [])
+
+    def test_relative_path_with_parent_refs_is_normalized(self):
+        main(hook_input(self.cwd, "Write", {"file_path": "src/../api.ts", "content": "x"}),
+             home=str(self.home))
+        self.assertEqual(self.rows()[0]["file"], "api.ts")
+
+    def test_relative_path_with_leading_dot_is_normalized(self):
+        main(hook_input(self.cwd, "Write", {"file_path": "./src/api.ts", "content": "x"}),
+             home=str(self.home))
+        self.assertEqual(self.rows()[0]["file"], "src/api.ts")
+
+    def test_file_named_dotdotfoo_after_normalization_is_logged_correctly(self):
+        (self.cwd / "..foo.ts").write_text("content")
+        main(hook_input(self.cwd, "Write", {"file_path": "..foo.ts", "content": "x"}),
+             home=str(self.home))
+        self.assertEqual(self.rows()[0]["file"], "..foo.ts")
+
 if __name__ == "__main__":
     unittest.main()

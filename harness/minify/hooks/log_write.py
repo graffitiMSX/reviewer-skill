@@ -35,7 +35,10 @@ def main(stdin_text, home=None):
         raw = tool_input.get("file_path")
         if payload is None or not isinstance(raw, str) or not raw:
             return 0
-        rel = os.path.relpath(raw, cwd) if os.path.isabs(raw) else raw
+        abs_target = raw if os.path.isabs(raw) else os.path.join(cwd, raw)
+        abs_target = os.path.abspath(abs_target)
+        abs_cwd = os.path.abspath(cwd)
+        rel = os.path.relpath(abs_target, abs_cwd)
         if os.path.isabs(rel) or rel == ".." or rel.startswith(".." + os.sep):
             return 0
         cls = classify(rel)
