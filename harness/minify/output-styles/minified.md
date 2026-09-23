@@ -14,20 +14,28 @@ code stays as emitted, which is why the session verdict below must be obeyed.
 ## Respect the session verdict
 
 At session start the harness injects a line beginning `minify-harness:`. It names
-the extensions that are safe here and whether the repo is formatter-clean, using
-one of three verdicts. Obey the verdict:
+the extensions that are safe here and whether the repo is formatter-clean. There
+are three verdict states and four possible renderings. Obey the verdict:
 
 - If the line is absent, no verdict is available (the hook is not installed or
   failed to run). Emit code normally — do not assume anything is safe.
 - An extension it does not list as safe is either excluded entirely, has a
   formatter that does not work file-by-file, or is marked unsafe. Emit it
   normally — minifying it would leave it minified permanently.
-- `repo formatter-clean: minify new and existing files` means minify all touched
-  files.
-- `repo NOT formatter-clean: minify new files only` or `checked N of M,
-  cleanliness unknown: minify new files only` (the latter with an optional sample
-  prefix) means minify new files only. Edits to existing files are emitted
-  normally, because formatting those files would rewrite lines nobody touched.
+
+Verdicts (by state):
+
+- **Clean:** `repo formatter-clean: minify new and existing files` — minify all
+  touched files.
+- **Not clean:** `repo NOT formatter-clean: minify new files only` — minify new
+  files only. Edits to existing files are emitted normally, because formatting
+  those files would rewrite lines nobody touched.
+- **Unknown (two renderings):**
+  - `cleanliness unknown: minify new files only` (common, when no per-file
+    formatter can be probed)
+  - `checked N of M, cleanliness unknown: minify new files only` (when the repo
+    was too large and only a sample was checked; N and M are numbers)
+  - Both render the same verdict: minify new files only.
 
 ## Collapse class
 

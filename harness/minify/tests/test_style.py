@@ -1,6 +1,7 @@
 import re, unittest
 from pathlib import Path
 from harness.minify.lib.classes import COLLAPSE, DENSE
+from harness.minify.lib.doctor import one_line
 
 STYLE = Path("harness/minify/output-styles/minified.md")
 
@@ -30,6 +31,30 @@ class TestStyle(unittest.TestCase):
 
     def test_tells_the_model_to_respect_the_session_verdict(self):
         self.assertIn("minify-harness:", STYLE.read_text())
+
+    def test_all_four_verdict_renderings_are_quoted(self):
+        """Check that the style quotes all four verdicts produced by one_line()."""
+        text = STYLE.read_text()
+
+        # Generate all four verdict renderings from doctor.one_line()
+        verdicts = [
+            {"repo_clean": True, "safe": [], "blocked": [], "checked": 0, "tracked_total": 0, "truncated": False},
+            {"repo_clean": False, "safe": [], "blocked": [], "checked": 0, "tracked_total": 0, "truncated": False},
+            {"repo_clean": None, "safe": [], "blocked": [], "checked": 200, "tracked_total": 912, "truncated": True},
+            {"repo_clean": None, "safe": [], "blocked": [], "checked": 0, "tracked_total": 0, "truncated": False},
+        ]
+
+        for verdict in verdicts:
+            line = one_line(verdict)
+            # Extract just the rule part (after the last |)
+            rule = line.split(" | ")[-1]
+            # For the sampled case, check that the pattern is present (N and M will vary)
+            if "checked" in rule:
+                self.assertIn("checked", text, f"Style should mention 'checked' for sampled verdicts")
+                self.assertIn("cleanliness unknown:", text, f"Style should quote the 'cleanliness unknown:' token")
+            else:
+                # For non-sampled verdicts, check the exact rule string
+                self.assertIn(rule, text, f"Style should quote verdict: {rule}")
 
 if __name__ == "__main__":
     unittest.main()
