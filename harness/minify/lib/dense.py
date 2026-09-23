@@ -94,8 +94,13 @@ def _py_densify_line(line, lead_map):
     depth = lead_map.get(lead, 0)
     return (" " * depth) + line[lead_end:].strip()
 
-def densify(text, path):
-    """Dense form of `text`. Excluded files come back unchanged.
+def densify_status(text, path):
+    """Dense form of `text` with unclosed-block-comment status.
+
+    Returns: (dense_text, unclosed_block_comment)
+
+    Excluded files come back unchanged. When a block comment opener has no closer,
+    the text after the opener is kept unstripped and unclosed_block_comment is True.
 
     WARNING: This function can alter multi-line string contents by re-indenting
     their interior lines. The dense form must not be used as a basis for rewriting
@@ -113,3 +118,14 @@ def densify(text, path):
         out = [l.strip() for l in lines]
     result = "\n".join(out) + ("\n" if out else "")
     return result, unclosed_block
+
+def densify(text, path):
+    """Dense form of `text`. Excluded files come back unchanged.
+
+    Returns: str (the densified text)
+
+    WARNING: This function can alter multi-line string contents by re-indenting
+    their interior lines. The dense form must not be used as a basis for rewriting
+    a file with Write or any other tool — re-read the real file first."""
+    result, _ = densify_status(text, path)
+    return result

@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from harness.minify.lib.dense import densify
+from harness.minify.lib.dense import densify_status
 
 def main(argv):
     if len(argv) != 1:
@@ -20,7 +20,7 @@ def main(argv):
     except OSError as e:
         print(f"minread: {e}", file=sys.stderr)
         return 1
-    result, unclosed_block = densify(text, str(p))
+    result, unclosed_block = densify_status(text, str(p))
     if unclosed_block:
         print(f"minread: {p}: unclosed block comment, remainder left unstripped", file=sys.stderr)
     sys.stdout.write(result)
