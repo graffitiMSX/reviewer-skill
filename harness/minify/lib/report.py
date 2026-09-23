@@ -1,5 +1,5 @@
 """Read measurement rows and render the savings table."""
-from harness.minify.lib.estimate import load_k
+from harness.minify.lib.estimate import load_k, _r
 from harness.minify.lib.events import read
 
 def measures(paths):
@@ -12,11 +12,17 @@ def measures(paths):
     return rows
 
 def _usable(r):
-    return bool(r.get("formatter_ok")) and r.get("tok_fmt") is not None
+    """Check that a row has all required fields and was successfully formatted."""
+    return (bool(r.get("formatter_ok")) and
+            r.get("tok_fmt") is not None and
+            r.get("file") is not None and
+            r.get("ext") is not None and
+            r.get("tok_min") is not None)
 
 def dedupe(rows):
     """Last measurement per (session, file), in first-appearance order.
-    Rows that were never formatted are ignored."""
+    Rows that were never formatted are ignored. When multiple rows have the same
+    turn, the later one in input order wins (via >= comparison)."""
     keep, order = {}, []
     for r in rows:
         if not _usable(r):
@@ -30,11 +36,13 @@ def dedupe(rows):
     return [keep[k] for k in order]
 
 def _pct(saved, base):
-    return f"{round(100 * saved / base)}%" if base else "-"
+    return f"{_r(100 * saved / base)}%" if base else "-"
 
 def by_lang(rows):
     groups = {}
     for r in rows:
+        if not _usable(r):
+            continue
         g = groups.setdefault(r["ext"], {"ext": r["ext"], "tok_min": 0, "tok_fmt": 0, "files": 0})
         g["tok_min"] += r["tok_min"]
         g["tok_fmt"] += r["tok_fmt"]

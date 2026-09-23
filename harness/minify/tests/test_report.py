@@ -21,6 +21,30 @@ class TestDedupe(unittest.TestCase):
         rows = [row("a.ts", 1, 100, None, ok=False), row("b.ts", 1, 10, 20)]
         self.assertEqual([r["file"] for r in dedupe(rows)], ["b.ts"])
 
+    def test_row_missing_file_is_skipped(self):
+        rows = [row("a.ts", 1, 100, 150)]
+        malformed = {"k": "measure", "session": "s1", "turn": 1, "tok_min": 100, "tok_fmt": 150,
+                     "ext": "ts", "chars_min": 300, "chars_fmt": 450, "formatter_ok": True, "style": "minified"}
+        # malformed row has no "file" field
+        result = dedupe([malformed, *rows])
+        self.assertEqual([r["file"] for r in result], ["a.ts"])
+
+    def test_row_missing_tok_min_is_skipped(self):
+        rows = [row("a.ts", 1, 100, 150)]
+        malformed = {"k": "measure", "session": "s1", "turn": 1, "file": "b.ts", "tok_fmt": 150,
+                     "ext": "ts", "chars_min": 300, "chars_fmt": 450, "formatter_ok": True, "style": "minified"}
+        # malformed row has no "tok_min" field
+        result = dedupe([malformed, *rows])
+        self.assertEqual([r["file"] for r in result], ["a.ts"])
+
+    def test_row_missing_ext_is_skipped(self):
+        rows = [row("a.ts", 1, 100, 150)]
+        malformed = {"k": "measure", "session": "s1", "turn": 1, "file": "b.ts", "tok_min": 100, "tok_fmt": 150,
+                     "chars_min": 300, "chars_fmt": 450, "formatter_ok": True, "style": "minified"}
+        # malformed row has no "ext" field
+        result = dedupe([malformed, *rows])
+        self.assertEqual([r["file"] for r in result], ["a.ts"])
+
 class TestRender(unittest.TestCase):
     def test_totals_and_percentage(self):
         out = render([row("src/api.ts", 1, 412, 631), row("src/card.css", 1, 88, 142)], scope="SESSION s1")
@@ -46,12 +70,46 @@ class TestRender(unittest.TestCase):
     def test_uncalibrated_estimator_is_labelled(self):
         self.assertIn("uncalibrated", render([row("a.ts", 1, 1, 2)], scope="X").lower())
 
+    def test_render_with_all_malformed_rows_shows_empty_message(self):
+        malformed = [
+            {"k": "measure", "session": "s1", "turn": 1, "tok_min": 100, "tok_fmt": 150,
+             "ext": "ts", "formatter_ok": True},  # missing file
+            {"k": "measure", "session": "s1", "turn": 1, "file": "a.ts", "tok_fmt": 150,
+             "ext": "ts", "formatter_ok": True},  # missing tok_min
+        ]
+        out = render(malformed, scope="TEST")
+        self.assertIn("no measurements", out.lower())
+
+    def test_render_with_mixed_rows_skips_malformed_ones(self):
+        good = row("a.ts", 1, 100, 150)
+        malformed = {"k": "measure", "session": "s1", "turn": 1, "file": "b.ts",
+                     "tok_fmt": 100, "ext": "ts", "formatter_ok": True}  # missing tok_min
+        out = render([malformed, good], scope="TEST")
+        self.assertIn("a.ts", out)
+        self.assertNotIn("b.ts", out)
+
 class TestByLang(unittest.TestCase):
     def test_groups_and_sorts_by_saving(self):
         rows = [row("a.ts", 1, 70, 100), row("b.ts", 1, 70, 100), row("c.css", 1, 50, 100)]
         got = by_lang(dedupe(rows))
         self.assertEqual([g["ext"] for g in got], ["css", "ts"])   # css saves 50%, ts saves 30%
         self.assertEqual(got[1]["tok_min"], 140)
+
+    def test_by_lang_filters_malformed_rows(self):
+        good = row("a.ts", 1, 100, 150)
+        malformed = {"k": "measure", "session": "s1", "turn": 1, "file": "b.ts", "tok_fmt": 100,
+                     "ext": "ts", "formatter_ok": True}  # missing tok_min
+        got = by_lang([good, malformed])
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0]["files"], 1)
+        self.assertEqual(got[0]["tok_min"], 100)
+
+    def test_by_lang_with_zero_tok_fmt_sum(self):
+        rows = [row("a.ts", 1, 100, 0)]
+        got = by_lang(rows)
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0]["tok_fmt"], 0)
+        self.assertEqual(got[0]["saved"], -100)
 
 class TestMeasures(unittest.TestCase):
     def test_reads_only_measure_rows_and_tags_the_session(self):
