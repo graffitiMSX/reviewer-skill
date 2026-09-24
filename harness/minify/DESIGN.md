@@ -3,6 +3,13 @@
 Force minified code emission from Claude Code, restore readable formatting with the
 project's own formatter at turn end, and measure what the minified emission saved.
 
+Formatting is not a canonicalizer: it normalizes indentation, line breaks and brace
+placement to the project's own style, but it cannot reintroduce blank lines or the
+original brace style that minification removed. "Restore readable formatting" means
+the file becomes readable and consistently styled again, not that it round-trips back
+to its exact original bytes. See the Collapse-class note in the output style and the
+round-trip tests' goldens (Task 14) for what this looks like in practice.
+
 Status: approved design, not yet implemented.
 Home: `harness/minify/` in this repo during development; moves to its own repo once the
 tests pass.

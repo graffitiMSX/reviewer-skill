@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+"""Print a dense form of a file. For orientation, not for sourcing Edit strings.
+
+WARNING: The dense form can alter multi-line string contents by re-indenting their
+interior lines. The dense form must not be used as a basis for rewriting a file with
+Write or any other tool — re-read the real file first."""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from harness.minify.lib.dense import densify_status
+
+def main(argv):
+    if len(argv) != 1:
+        print("usage: minread <file>", file=sys.stderr)
+        return 2
+    p = Path(argv[0])
+    try:
+        text = p.read_text(errors="replace")
+    except OSError as e:
+        print(f"minread: {e}", file=sys.stderr)
+        return 1
+    result, unclosed_block = densify_status(text, str(p))
+    if unclosed_block:
+        print(f"minread: {p}: unclosed block comment, remainder left unstripped", file=sys.stderr)
+    sys.stdout.write(result)
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

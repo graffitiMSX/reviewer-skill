@@ -1,5 +1,14 @@
 # Minify Harness Implementation Plan
 
+> **Status note:** All 15 tasks below were implemented, reviewed and fixed across
+> multiple rounds. Every ruling made during and after that process — including
+> corrections to this plan's own reference code and designs it got wrong (formatter
+> capability sets, the churn-fraction denominator, the dense-Python re-indentation
+> scheme, the settings.json atomicity, and others) — is recorded in
+> `.superpowers/sdd/PLAN/progress.md`, which is the authoritative execution ledger.
+> Where this plan's prose or reference code differs from the ledger, the ledger wins;
+> this file is not being rewritten to match it after the fact.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship a harness that makes Claude Code emit minified code, restores readable formatting with the project's own formatter at every turn end, and reports what the minified emission saved.
@@ -708,6 +717,7 @@ git commit -m "minify: PostToolUse write logger"
 ```python
 # harness/minify/tests/test_detect.py
 import json, os, stat, tempfile, unittest
+import unittest.mock as mock
 from pathlib import Path
 from harness.minify.lib.detect import detect
 
@@ -744,13 +754,21 @@ class TestDetect(unittest.TestCase):
 
     def test_npm_script_is_detected_but_not_per_file(self):
         (self.root / "package.json").write_text(json.dumps({"scripts": {"format": "prettier -w ."}}))
-        f = detect(str(self.root), "ts")
+        with mock.patch("harness.minify.lib.detect._npx_prettier_ok", return_value=False):
+            f = detect(str(self.root), "ts")
         self.assertEqual(f.name, "npm-script:format")
         self.assertFalse(f.per_file)
 
     def test_nothing_found_is_none(self):
-        self.assertIsNone(detect(str(self.root), "ts"))
+        with mock.patch("harness.minify.lib.detect._npx_prettier_ok", return_value=False):
+            self.assertIsNone(detect(str(self.root), "ts"))
         self.assertIsNone(detect(str(self.root), "py"))
+
+    def test_unusable_npx_is_not_offered_as_a_formatter(self):
+        with mock.patch("harness.minify.lib.detect._npx_prettier_ok", return_value=False):
+            self.assertIsNone(detect(str(self.root), "ts"))
+        with mock.patch("harness.minify.lib.detect._npx_prettier_ok", return_value=True):
+            self.assertEqual(detect(str(self.root), "ts").name, "npx:prettier")
 
     def test_unknown_extension_is_none(self):
         fake_bin(self.root / "node_modules/.bin/prettier")
@@ -782,7 +800,7 @@ Expected: FAIL — `No module named 'harness.minify.lib.detect'`
 ```python
 # harness/minify/lib/detect.py
 """Find a per-file formatter a project already has. Never installs anything."""
-import json, os, shutil, subprocess
+import json, os, re, shutil, subprocess
 
 NODE_EXTS = frozenset("ts tsx js jsx mjs cjs css scss json html svg".split())
 PY_EXTS = frozenset({"py"})
@@ -810,6 +828,27 @@ class Formatter:
         """True when path is already formatter-clean."""
         return self._run(self._chk, path)
 
+_NPX_OK = None
+
+def _npx_prettier_ok():
+    """True only when `npx --no-install prettier` can actually run. A detected but
+    unusable formatter would let the harness minify files it cannot un-minify.
+    Probed once per process; `npx` exits 0 while printing an error, so the version
+    string is what decides."""
+    global _NPX_OK
+    if _NPX_OK is None:
+        npx = shutil.which("npx")
+        if not npx:
+            _NPX_OK = False
+        else:
+            try:
+                p = subprocess.run([npx, "--no-install", "prettier", "--version"],
+                                   capture_output=True, text=True, timeout=TIMEOUT)
+                _NPX_OK = p.returncode == 0 and bool(re.match(r"\d+\.\d+", p.stdout.strip()))
+            except (OSError, subprocess.SubprocessError):
+                _NPX_OK = False
+    return _NPX_OK
+
 def _exe(root, rel):
     p = os.path.join(root, rel)
     return p if os.path.isfile(p) and os.access(p, os.X_OK) else None
@@ -835,8 +874,8 @@ def detect(root, ext):
         b = _exe(root, "node_modules/.bin/biome")
         if b:
             return Formatter("biome@node_modules", [b, "format", "--write"], [b, "format"])
-        npx = shutil.which("npx")
-        if npx:
+        if _npx_prettier_ok():
+            npx = shutil.which("npx")
             return Formatter("npx:prettier", [npx, "--no-install", "prettier", "--write"],
                              [npx, "--no-install", "prettier", "--check"])
         return _npm_script(root)
@@ -857,24 +896,17 @@ def detect(root, ext):
     return None
 ```
 
-Note on ordering: `npx:prettier` is tried before the npm script because it formats one file, and `npx --no-install` fails fast when prettier is not cached rather than downloading anything. `test_npm_script_is_detected_but_not_per_file` therefore needs `npx` absent from `PATH`; make the test explicit by patching `shutil.which` to return `None` inside that one test:
-
-```python
-    def test_npm_script_is_detected_but_not_per_file(self):
-        import unittest.mock as mock
-        (self.root / "package.json").write_text(json.dumps({"scripts": {"format": "prettier -w ."}}))
-        with mock.patch("harness.minify.lib.detect.shutil.which", return_value=None):
-            f = detect(str(self.root), "ts")
-        self.assertEqual(f.name, "npm-script:format")
-        self.assertFalse(f.per_file)
-```
-
-Apply the same `mock.patch` to `test_nothing_found_is_none` for the `ts` case, since `npx` exists on this machine.
+Ordering note: `npx:prettier` comes before the npm script because it formats one file,
+but it is offered **only** when `_npx_prettier_ok()` proves it runs. On this machine it does
+not — `npx --no-install prettier` reports a missing package while still exiting 0 — so `ts`
+correctly detects as having no formatter, and the harness leaves those files alone instead of
+minifying what it cannot restore. Tests patch `_npx_prettier_ok` rather than `shutil.which`,
+because the probe memoizes and a `which` patch applied after the first probe has no effect.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `python3 -m unittest harness.minify.tests.test_detect -v`
-Expected: PASS, 9 tests
+Expected: PASS, 10 tests
 
 - [ ] **Step 5: Commit**
 
@@ -1685,7 +1717,7 @@ if __name__ == "__main__":
 - [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `python3 -m unittest harness.minify.tests.test_doctor harness.minify.tests.test_detect -v`
-Expected: PASS, 9 + 9 tests
+Expected: PASS, 9 + 10 tests
 
 - [ ] **Step 7: Commit**
 
@@ -1895,7 +1927,7 @@ git commit -m "minify: savings report"
 
 ```python
 # harness/minify/tests/test_cli.py
-import importlib.util, io, json, stat, tempfile, unittest
+import importlib.machinery, importlib.util, io, json, stat, tempfile, unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 from harness.minify.lib import events as E, unsafe as U
@@ -2437,6 +2469,8 @@ def sync(record_id,opts=None):
  return{"id":record_id,"items":response.json().get("items",[])}
 ```
 
+`config.readable.json`:
+
 ```json
 {
   "name": "demo",
@@ -2446,9 +2480,13 @@ def sync(record_id,opts=None):
 }
 ```
 
+`config.min.json`:
+
 ```json
 {"name":"demo","retries":3,"hosts":["a.dev","b.dev"],"nested":{"on":true,"off":false,"nil":null}}
 ```
+
+`api.readable.ts`:
 
 ```typescript
 export async function sync(id: string, opts: Opts = {}): Promise<Result> {
@@ -2463,9 +2501,13 @@ export async function sync(id: string, opts: Opts = {}): Promise<Result> {
 }
 ```
 
+`api.min.ts`:
+
 ```typescript
 export async function sync(id:string,opts:Opts={}):Promise<Result>{const res=await fetch(`/api/${id}`,{method:"POST"});if(!res.ok)throw new Error(`fail ${res.status}`);const data=await res.json();return{id,items:data.items??[],at:Date.now()}}
 ```
+
+`card.readable.css`:
 
 ```css
 .card {
@@ -2477,6 +2519,8 @@ export async function sync(id:string,opts:Opts={}):Promise<Result>{const res=awa
 }
 ```
 
+`card.min.css`:
+
 ```css
 .card{display:flex;gap:8px;padding:12px;border-radius:6px}
 ```
@@ -2485,6 +2529,8 @@ The ASI pair is the negative control: `asi.readable.js` relies on automatic semi
 insertion, and `asi.collapsed.js` is what naive collapsing produces. The test asserts
 they are **not** equivalent — proof that the style's ASI rule is load-bearing.
 
+`asi.readable.js`:
+
 ```javascript
 function pick(a, b) {
   const x = a
@@ -2492,6 +2538,8 @@ function pick(a, b) {
   return x + y
 }
 ```
+
+`asi.collapsed.js`:
 
 ```javascript
 function pick(a,b){const x=a const y=b return x+y}

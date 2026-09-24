@@ -1,0 +1,6 @@
+export async function sync(id: string, opts: Opts = {}): Promise<Result> {
+  const res = await fetch(`/api/${id}`, { method: "POST" });
+  if (!res.ok) throw new Error(`fail ${res.status}`);
+  const data = await res.json();
+  return { id, items: data.items ?? [], at: Date.now() };
+}
