@@ -3,7 +3,9 @@ from pathlib import Path
 from harness.minify.lib.classes import COLLAPSE, DENSE
 from harness.minify.lib.doctor import one_line
 
-STYLE = Path("harness/minify/output-styles/minified.md")
+# Path(__file__)-relative, not cwd-relative (minor fix -- matches test_install.py's
+# existing pattern).
+STYLE = Path(__file__).resolve().parents[1] / "output-styles" / "minified.md"
 
 def listed(label):
     text = STYLE.read_text()

@@ -1,7 +1,12 @@
 """Find a per-file formatter a project already has. Never installs anything."""
 import json, os, re, shutil, subprocess
 
-NODE_EXTS = frozenset("ts tsx js jsx mjs cjs css scss json html svg".split())
+# Each node formatter gets its OWN capability set rather than one shared NODE_EXTS.
+# prettier has no parser for svg; biome does not format scss, html or svg either --
+# sharing one set let detect() claim a formatter for an extension it cannot actually
+# handle (FIX 1). check_many callers must intersect against these, not COLLAPSE|DENSE.
+PRETTIER_EXTS = frozenset("ts tsx js jsx mjs cjs css scss json html".split())
+BIOME_EXTS = frozenset("ts tsx js jsx mjs cjs json css".split())
 PY_EXTS = frozenset({"py"})
 TIMEOUT = 30
 
@@ -76,13 +81,17 @@ def _npm_script(root):
 
 def detect(root, ext):
     ext = (ext or "").lower()
-    if ext in NODE_EXTS:
+    if ext in PRETTIER_EXTS:
         p = _exe(root, "node_modules/.bin/prettier")
         if p:
             return Formatter("prettier@node_modules", [p, "--write"], [p, "--check"])
+    if ext in BIOME_EXTS:
         b = _exe(root, "node_modules/.bin/biome")
         if b:
             return Formatter("biome@node_modules", [b, "format", "--write"], [b, "format"])
+    if ext in PRETTIER_EXTS:
+        # Fallbacks below both run prettier itself (npx) or trust the project's own
+        # script, so they are only offered for extensions prettier itself claims.
         if _npx_prettier_ok():
             npx = shutil.which("npx")
             return Formatter("npx:prettier", [npx, "--no-install", "prettier", "--write"],
@@ -96,10 +105,4 @@ def detect(root, ext):
         if bl:
             return Formatter("black@venv", [bl, "--quiet"], [bl, "--check", "--quiet"])
         return None
-    if ext == "go":
-        g = shutil.which("gofmt")
-        return Formatter("gofmt", [g, "-w"], [g, "-l"]) if g else None
-    if ext == "rs":
-        rf = shutil.which("rustfmt")
-        return Formatter("rustfmt", [rf], [rf, "--check"]) if rf else None
     return None

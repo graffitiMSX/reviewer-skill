@@ -39,3 +39,5 @@ print('patched:', changed or 'nothing (already installed)')
 "
 echo "installed. activate with:  /output-style minified"
 echo "check what is safe here:   minify-harness doctor"
+echo "a SessionStart hook cannot fire for the session that just installed it --"
+echo "start a new session (or restart Claude Code) for the hooks to take effect."

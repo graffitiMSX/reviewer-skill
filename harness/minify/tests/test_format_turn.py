@@ -1,9 +1,11 @@
-import io, json, os, stat, tempfile, unittest
+import fcntl, io, json, os, stat, subprocess, sys, tempfile, unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
 from harness.minify.hooks.format_turn import main
 from harness.minify.lib import events as E, unsafe as U
+
+SCRIPT = Path(__file__).resolve().parents[1] / "hooks" / "format_turn.py"
 
 def stub(path, body):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -188,22 +190,63 @@ class TestSafety(Base):
         self.assertEqual(E.current_turn(str(self.cwd), "s1", home=self.home), 2)
 
     def test_reentrant_call_is_skipped_by_the_lock(self):
+        """FIX 3: the lock is now advisory (fcntl.flock on an open fd), not
+        existence-based, so this must hold a real flock from a live 'process' to
+        prove reentrancy is still blocked. A single process can hold two independent
+        locks on the same file via two separate open()s -- flock() applies to open
+        file descriptions, not processes -- so opening and locking the file here
+        genuinely conflicts with the hook's own open+flock, the same way a second
+        live Stop hook process would."""
         stub(self.cwd / "node_modules/.bin/prettier", SPACE_EQUALS)
         (self.cwd / "src/api.ts").write_text("const a=1;\n")
         self.log_write("src/api.ts")
         lock = E.harness_dir(str(self.cwd), self.home) / "s1.lock"
         lock.parent.mkdir(parents=True, exist_ok=True)
-        lock.write_text("held")
-        rc, _ = self.run_hook()
-        self.assertEqual(rc, 0)
-        self.assertEqual(self.measures(), [])
+        fd = os.open(str(lock), os.O_CREAT | os.O_RDWR)
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        try:
+            rc, out = self.run_hook()
+            self.assertEqual(rc, 0)
+            self.assertEqual(self.measures(), [])
+            self.assertIn("already running", out.lower())  # never silent (FIX 3)
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
 
     def test_lock_is_released_after_a_normal_run(self):
+        """FIX 3: the lock file is kept (not unlinked) so a stale leftover cannot
+        recur; what must be released is the advisory lock ON it. Prove that by
+        acquiring a fresh, non-blocking exclusive lock on the same file after the
+        hook returns -- it must succeed, meaning the hook's own lock was unlocked
+        and its fd closed rather than merely leaking an open, still-locked fd."""
         stub(self.cwd / "node_modules/.bin/prettier", SPACE_EQUALS)
         (self.cwd / "src/api.ts").write_text("const a=1;\n")
         self.log_write("src/api.ts")
         self.run_hook()
-        self.assertFalse((E.harness_dir(str(self.cwd), self.home) / "s1.lock").exists())
+        lock = E.harness_dir(str(self.cwd), self.home) / "s1.lock"
+        self.assertTrue(lock.exists())  # kept, not unlinked
+        fd = os.open(str(lock), os.O_CREAT | os.O_RDWR)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)  # must not raise
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
+
+    def test_leftover_lock_file_does_not_block_the_next_turn(self):
+        """FIX 3: the specific defect being fixed. A Stop hook killed mid-run under
+        the old O_CREAT|O_EXCL scheme left the lock FILE behind with nothing holding
+        it, silently disabling the harness for the rest of the session. A leftover
+        file with no live flock on it must not block the next turn."""
+        stub(self.cwd / "node_modules/.bin/prettier", SPACE_EQUALS)
+        (self.cwd / "src/api.ts").write_text("const a=1;\n")
+        self.log_write("src/api.ts")
+        lock = E.harness_dir(str(self.cwd), self.home) / "s1.lock"
+        lock.parent.mkdir(parents=True, exist_ok=True)
+        lock.write_text("stale")  # a process died without releasing anything
+        rc, _ = self.run_hook()
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(self.measures()), 1)
+        self.assertTrue(self.measures()[0]["formatter_ok"])
 
     def test_no_output_when_nothing_to_say(self):
         stub(self.cwd / "node_modules/.bin/prettier", SPACE_EQUALS)
@@ -241,6 +284,49 @@ class TestPerFileGuard(Base):
         # the turn still closes even though one file failed
         self.assertEqual(E.current_turn(str(self.cwd), "s1", home=self.home), 2)
 
+class TestStdinDecodeGuard(unittest.TestCase):
+    """FIX 4: sys.stdin.read() in the __main__ block must not raise past the
+    always-exit-0 boundary on non-UTF-8 bytes. main() can't exercise this -- it
+    takes already-decoded text -- so this drives the real script as a subprocess
+    with raw invalid-UTF-8 bytes on stdin, the way Claude Code actually invokes
+    hooks. log_write.py already had this guard (hooks/log_write.py:67-70); this
+    carries it to format_turn.py."""
+
+    def test_invalid_utf8_stdin_exits_zero(self):
+        result = subprocess.run([sys.executable, str(SCRIPT)], input=b"\xff\xfe\x00garbage",
+                                 capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0)
+
+class TestPathContainment(Base):
+    """FIX 7: format_turn is the component that joins a logged row's `file` onto
+    cwd and runs the formatter's --write on the result, so it must not trust that
+    field just because log_write's own containment guard is sound today -- the log
+    is a persisted NDJSON file, not a value this hook controls."""
+
+    def test_absolute_file_path_is_skipped(self):
+        stub(self.cwd / "node_modules/.bin/prettier", SPACE_EQUALS)
+        outside = Path(self.tmp.name) / "outside.ts"
+        outside.write_text("const a=1;\n")
+        E.append(str(self.cwd), "s1", {"k": "write", "turn": 1, "tool": "Write",
+                                       "file": str(outside), "ext": "ts", "class": "collapse",
+                                       "tok": 0, "chars": 0, "style": "minified"}, home=self.home)
+        rc, _ = self.run_hook()
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.measures(), [])
+        self.assertEqual(outside.read_text(), "const a=1;\n")  # never touched
+
+    def test_dotdot_component_is_skipped(self):
+        stub(self.cwd / "node_modules/.bin/prettier", SPACE_EQUALS)
+        outside = Path(self.tmp.name) / "outside.ts"
+        outside.write_text("const a=1;\n")
+        E.append(str(self.cwd), "s1", {"k": "write", "turn": 1, "tool": "Write",
+                                       "file": "../outside.ts", "ext": "ts", "class": "collapse",
+                                       "tok": 0, "chars": 0, "style": "minified"}, home=self.home)
+        rc, _ = self.run_hook()
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.measures(), [])
+        self.assertEqual(outside.read_text(), "const a=1;\n")  # never touched
+
 class TestOuterGuard(Base):
     """Controller-required guard: the lock must be released even when the body
     raises past the per-file guard (the true last-resort path)."""
@@ -258,7 +344,14 @@ class TestOuterGuard(Base):
         state_path.mkdir()
         rc, out = self.run_hook()
         self.assertEqual(rc, 0)
-        self.assertFalse((E.harness_dir(str(self.cwd), self.home) / "s1.lock").exists())
+        # FIX 3: the lock file itself is kept; what must be released is the flock.
+        lock = E.harness_dir(str(self.cwd), self.home) / "s1.lock"
+        fd = os.open(str(lock), os.O_CREAT | os.O_RDWR)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)  # must not raise
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
         self.assertIn("internal error", out.lower())
         # the file was measured and formatted before bump_turn's failure surfaced
         self.assertEqual(len(self.measures()), 1)

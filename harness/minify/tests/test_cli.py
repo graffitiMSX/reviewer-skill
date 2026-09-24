@@ -3,7 +3,9 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from harness.minify.lib import events as E, unsafe as U
 
-SPEC = Path("harness/minify/bin/minify-harness").resolve()
+# Path(__file__)-relative, not cwd-relative (minor fix -- matches test_install.py's
+# existing pattern), so this module works regardless of the process's own cwd.
+SPEC = Path(__file__).resolve().parents[1] / "bin" / "minify-harness"
 
 def load_cli():
     spec = importlib.util.spec_from_loader("mh_cli", importlib.machinery.SourceFileLoader("mh_cli", str(SPEC)))
@@ -79,6 +81,22 @@ class TestCLI(unittest.TestCase):
     def test_doctor_clear_missing_returns_one(self):
         rc, out = self.execute("doctor", "--clear", "py")
         self.assertEqual(rc, 1)
+
+    def test_report_scope_line_shows_style(self):
+        """Minor fix: `style=` was missing from the scope line, so `report --all`
+        could silently mix armed (minified) and baseline sessions. DESIGN.md:232
+        specifies it and the field is already logged."""
+        self.measure("s1", "a.ts", 1, 10, 20)  # style="minified", per measure()
+        _, out = self.execute("report")
+        self.assertIn("style=minified", out)
+
+    def test_report_scope_line_labels_unstyled_rows_as_baseline(self):
+        E.append(self.cwd, "s1", {"k": "measure", "turn": 1, "file": "a.ts",
+                                  "ext": "ts", "tok_min": 10, "tok_fmt": 20,
+                                  "chars_min": 30, "chars_fmt": 60,
+                                  "formatter_ok": True}, home=self.home)  # no "style" key
+        _, out = self.execute("report")
+        self.assertIn("style=baseline", out)
 
 if __name__ == "__main__":
     unittest.main()

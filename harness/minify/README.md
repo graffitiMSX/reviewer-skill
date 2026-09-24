@@ -9,11 +9,20 @@ and measure what the minified emission saved.
     minify-harness report         # what it saved this session
     ./uninstall.sh                # reverse everything
 
+A `SessionStart` hook cannot fire for the session that installed it, so after running
+`install.sh` there is no verdict and no logger yet -- start a new session, or restart
+Claude Code, for the hooks to take effect.
+
 Design: `DESIGN.md`. Plan: `PLAN.md`.
 
 The report counts emitted code only. A failed `Edit` against a formatted file costs a
 re-read that the number does not net out, so treat it as "savings on emitted code",
 not "savings on the session".
+
+The formatter normalizes indentation and line breaks, but it is not a canonicalizer:
+blank lines and brace style removed by minification do not come back. "Format it back"
+means the code becomes syntactically well-formed and consistently styled again, not
+that the original file is restored byte-for-byte.
 
 Tests: `python3 -m unittest discover -s harness/minify/tests -t .` from the repo root.
 Seven round-trip tests skip unless the project has a local prettier.

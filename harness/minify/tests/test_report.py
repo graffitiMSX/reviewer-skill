@@ -8,6 +8,12 @@ def row(file, turn, tok_min, tok_fmt, ok=True, session="s1", ext=None):
             "chars_min": tok_min * 3, "chars_fmt": tok_fmt * 3 if tok_fmt else None,
             "formatter_ok": ok, "style": "minified"}
 
+def churn_row(file, turn, tok_min, tok_fmt, churn_outside, lines_fmt, **kw):
+    r = row(file, turn, tok_min, tok_fmt, **kw)
+    r["churn_outside"] = churn_outside
+    r["lines_fmt"] = lines_fmt
+    return r
+
 class TestDedupe(unittest.TestCase):
     def test_last_turn_per_file_wins(self):
         rows = [row("a.ts", 1, 100, 150), row("a.ts", 7, 200, 320), row("b.css", 2, 10, 20)]
@@ -69,6 +75,50 @@ class TestRender(unittest.TestCase):
 
     def test_uncalibrated_estimator_is_labelled(self):
         self.assertIn("uncalibrated", render([row("a.ts", 1, 1, 2)], scope="X").lower())
+
+    def test_turns_total_is_deduped_not_summed_per_row(self):
+        """FIX 5: --turns must list every row (asserted by test_turns_flag_keeps_
+        every_row above) but the TOTAL and the SAVED% headline must come from
+        dedupe(rows), not from summing every row -- a file touched in turns 1 and 7
+        would otherwise have its tokens counted twice. Worked example from the fix
+        report: rows (100,150) and (200,320) must total 200/320 (38%), not the
+        double-counted 300/470 (36%)."""
+        rows = [row("a.ts", 1, 100, 150), row("a.ts", 7, 200, 320)]
+        out = render(rows, scope="X", turns=True)
+        self.assertIn("200", out)
+        self.assertIn("320", out)
+        self.assertIn("38%", out)      # 120/320 saved, half-up rounded
+        self.assertNotIn("300", out)   # old, wrong double-counted tok_min total
+        self.assertNotIn("470", out)   # old, wrong double-counted tok_fmt total
+
+    def test_churn_heavy_row_is_excluded_from_total_but_shown_in_listing(self):
+        """FIX 6: a row whose formatting rewrote far more than the session emitted
+        (e.g. a one-character edit to a committed minified bundle, tok_min 1000 ->
+        tok_fmt 40000) must not inflate the headline SAVED% -- it is excluded from
+        the total but still listed and marked, so it stays visible rather than
+        silently dropped."""
+        heavy = churn_row("dist/bundle.js", 1, 1000, 40000, churn_outside=3990, lines_fmt=4000)
+        clean = row("src/api.ts", 1, 100, 150)
+        out = render([heavy, clean], scope="X")
+        self.assertIn("dist/bundle.js", out)             # still listed
+        self.assertIn("src/api.ts", out)
+        self.assertIn("churn", out.lower())               # marked inline
+        # total reflects only the clean row
+        lines = out.splitlines()
+        total_line = next(l for l in lines if l.strip().startswith("total"))
+        self.assertIn("100", total_line)
+        self.assertIn("150", total_line)
+        self.assertNotIn("1000", total_line)
+        self.assertNotIn("41000", out)  # 1000+40000, the wrong inflated total
+        self.assertIn("SAVED 33%", out)  # 50/150, only the clean row
+
+    def test_all_rows_churn_heavy_reports_no_measurements_in_total(self):
+        heavy = churn_row("dist/bundle.js", 1, 1000, 40000, churn_outside=3990, lines_fmt=4000)
+        out = render([heavy], scope="X")
+        self.assertIn("dist/bundle.js", out)
+        total_line = next(l for l in out.splitlines() if l.strip().startswith("total"))
+        self.assertIn("0", total_line)
+        self.assertIn("SAVED -", out)  # _pct with base 0 renders "-"
 
     def test_render_with_all_malformed_rows_shows_empty_message(self):
         malformed = [

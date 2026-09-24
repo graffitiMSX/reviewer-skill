@@ -1,4 +1,4 @@
-import contextlib, io, json, os, shlex, stat, subprocess, tempfile, unittest
+import contextlib, io, json, os, shlex, stat, subprocess, sys, tempfile, unittest
 import unittest.mock as mock
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -6,8 +6,21 @@ from harness.minify.lib.doctor import one_line, verdict
 from harness.minify.lib import unsafe as U
 from harness.minify.hooks.session_doctor import main
 
+SCRIPT = Path(__file__).resolve().parents[1] / "hooks" / "session_doctor.py"
+
 CLEAN = "#!/bin/sh\nexit 0\n"
 DIRTY = "#!/bin/sh\necho 'a.ts' \nexit 1\n"
+# Real prettier errors ("No parser could be inferred") on an extension it cannot
+# parse, such as .sh -- this stub reproduces that instead of the old stubs, which
+# exit 0 unconditionally and so could not catch FIX 2's defect (a permissive stub
+# is more forgiving than the real tool it stands in for).
+UNSUPPORTED_EXT_FAILS = ("#!/bin/sh\n"
+                          "for f in \"$@\"; do\n"
+                          "  case \"$f\" in\n"
+                          "    *.sh) echo \"No parser could be inferred for $f\" >&2; exit 2 ;;\n"
+                          "  esac\n"
+                          "done\n"
+                          "exit 0\n")
 
 def stub(path, body):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -107,6 +120,20 @@ class TestVerdict(unittest.TestCase):
         v = verdict(str(self.cwd), home=self.home)
         self.assertIsNone(v["repo_clean"])
         self.assertEqual(v["checked"], 0)
+
+    def test_repo_clean_ignores_a_tracked_file_the_probe_formatter_cannot_parse(self):
+        """FIX 2: a tracked .sh file must not make a clean .ts repo look dirty just
+        because the probe's formatter cannot parse it. Real prettier genuinely errors
+        on .sh ('No parser could be inferred'); before the fix, _tracked handed the
+        probe every COLLAPSE|DENSE extension indiscriminately, so this one non-.ts
+        file would poison check_many's single batch call and flip repo_clean to
+        False. The stub errors specifically on .sh, so this only passes if .sh was
+        excluded from what the probe was asked to check."""
+        git_repo(self.cwd, {"a.ts": "const a = 1;\n", "b.sh": "echo hi\n"})
+        stub(self.cwd / "node_modules/.bin/prettier", UNSUPPORTED_EXT_FAILS)
+        v = verdict(str(self.cwd), home=self.home)
+        self.assertIs(v["repo_clean"], True)
+        self.assertEqual(v["checked"], 1)  # only a.ts, not b.sh
 
     def test_check_many_runs_with_absolute_paths_regardless_of_process_cwd(self):
         """The probe's subprocess has no cwd= of its own (lib/detect.py's check_many does
@@ -215,6 +242,19 @@ class TestSessionStartHook(unittest.TestCase):
                       home=self.home)
         self.assertEqual(rc, 0)
         self.assertEqual(buf.getvalue().strip(), "")
+
+class TestStdinDecodeGuard(unittest.TestCase):
+    """FIX 4: sys.stdin.read() in the __main__ block must not raise past the
+    always-exit-0 boundary on non-UTF-8 bytes. main() can't exercise this -- it
+    takes already-decoded text -- so this drives the real script as a subprocess
+    with raw invalid-UTF-8 bytes on stdin, the way Claude Code actually invokes
+    hooks. log_write.py already had this guard; this carries it to
+    session_doctor.py."""
+
+    def test_invalid_utf8_stdin_exits_zero(self):
+        result = subprocess.run([sys.executable, str(SCRIPT)], input=b"\xff\xfe\x00garbage",
+                                 capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0)
 
 if __name__ == "__main__":
     unittest.main()

@@ -5,7 +5,7 @@ WARNING: This module can alter multi-line string contents. The dense form re-ind
 interior lines of triple-quoted strings, which changes the string value. The dense form
 must not be used as a basis for rewriting a file with Write or any other tool — re-read
 the real file first if you need to modify it."""
-from harness.minify.lib.classes import classify
+from harness.minify.lib.classes import classify, ext_of
 
 LINE_COMMENT = {"ts": "//", "js": "//", "mjs": "//", "cjs": "//", "tsx": "//", "jsx": "//",
                 "css": None, "scss": "//", "json": None, "svg": None, "html": None,
@@ -13,9 +13,6 @@ LINE_COMMENT = {"ts": "//", "js": "//", "mjs": "//", "cjs": "//", "tsx": "//", "
 BLOCK = {"ts": ("/*", "*/"), "js": ("/*", "*/"), "mjs": ("/*", "*/"), "cjs": ("/*", "*/"),
          "tsx": ("/*", "*/"), "jsx": ("/*", "*/"), "css": ("/*", "*/"), "scss": ("/*", "*/"),
          "html": ("<!--", "-->"), "svg": ("<!--", "-->")}
-
-def _ext(path):
-    return path.rsplit(".", 1)[1].lower() if "." in path else ""
 
 def _strip_comments(text, line_tok, block):
     """Strip comments, returning (text, unclosed_block_comment).
@@ -107,7 +104,7 @@ def densify_status(text, path):
     a file with Write or any other tool — re-read the real file first."""
     if classify(path) == "exclude":
         return text, False
-    ext = _ext(path)
+    ext = ext_of(path)
     text, unclosed_block = _strip_comments(text, LINE_COMMENT.get(ext), BLOCK.get(ext))
     lines = [l.rstrip() for l in text.splitlines()]
     lines = [l for l in lines if l.strip()]

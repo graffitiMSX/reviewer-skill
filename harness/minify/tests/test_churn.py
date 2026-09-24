@@ -50,15 +50,19 @@ class TestChurn(unittest.TestCase):
             self.assertEqual(git_pre_image(d, "a.ts"), "")
 
     def test_git_pre_image_with_nul_in_filename_degrades(self):
-        # Task 5 found that subprocess.run raises ValueError on NUL bytes in arguments
-        # This should degrade to "" rather than raise
+        # Task 5 found that subprocess.run raises ValueError on NUL bytes in arguments.
+        # FIX 6 (minor): this is a genuine retrieval failure, not "untracked", so it
+        # must degrade to None -- distinguishable from the legitimate "" cases above --
+        # rather than raise.
         with tempfile.TemporaryDirectory() as d:
             subprocess.run(["git", "init", "-q"], cwd=d, check=True)
-            self.assertEqual(git_pre_image(d, "file\x00name"), "")
+            self.assertIsNone(git_pre_image(d, "file\x00name"))
 
     def test_git_pre_image_with_binary_content_degrades(self):
-        # git show on a binary/mis-encoded file raises UnicodeDecodeError
-        # This should degrade to "" rather than raise
+        # git show on a binary/mis-encoded file raises UnicodeDecodeError. FIX 6
+        # (minor): a genuine retrieval failure must degrade to None, not "" -- the
+        # file IS tracked and git DID answer, we just could not decode it, so
+        # treating it the same as "untracked" would hide a real failure.
         with tempfile.TemporaryDirectory() as d:
             subprocess.run(["git", "init", "-q"], cwd=d, check=True)
             subprocess.run(["git", "config", "user.email", "t@t"], cwd=d, check=True)
@@ -66,7 +70,7 @@ class TestChurn(unittest.TestCase):
             Path(d, "binary").write_bytes(b'\x80\x81\x82')
             subprocess.run(["git", "add", "binary"], cwd=d, check=True)
             subprocess.run(["git", "commit", "-qm", "x"], cwd=d, check=True)
-            self.assertEqual(git_pre_image(d, "binary"), "")
+            self.assertIsNone(git_pre_image(d, "binary"))
 
 if __name__ == "__main__":
     unittest.main()

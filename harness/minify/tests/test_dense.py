@@ -1,5 +1,5 @@
 import ast, importlib.machinery, importlib.util, io, tempfile, unittest
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from harness.minify.lib.dense import densify, densify_status
 
@@ -76,14 +76,6 @@ class TestDensify(unittest.TestCase):
         self.assertIn("def f():", result)
         self.assertIn(" return 1", result)
 
-    def test_mixed_tabs_and_spaces_python(self):
-        """FIX 2: Mixed tabs and spaces should be handled consistently."""
-        # Tabs at level 1, two tabs at level 2 (both valid in original Python)
-        src = "def f():\n\tif x:\n\t\ty = 1\n"
-        result = densify(src, "a.py")
-        # Should parse without IndentationError
-        ast.parse(result)
-
     def test_python_uniform_4space_parses(self):
         """ast.parse round-trip: uniform 4-space indentation."""
         src = "def f():\n    if x:\n        return 1\n"
@@ -96,14 +88,14 @@ class TestDensify(unittest.TestCase):
         result = densify(src, "a.py")
         ast.parse(result)
 
-    def test_python_tab_indented_parses(self):
-        """ast.parse round-trip: tab-indented Python."""
-        src = "def f():\n\tif x:\n\t\ty = 1\n"
-        result = densify(src, "a.py")
-        ast.parse(result)
-
-    def test_python_mixed_tabs_spaces_parses(self):
-        """ast.parse round-trip: mixed tabs and spaces."""
+    def test_python_two_level_tab_indented_parses(self):
+        """ast.parse round-trip: two levels of pure-tab indentation. (Renamed from
+        test_python_mixed_tabs_spaces_parses / test_mixed_tabs_and_spaces_python --
+        minor fix: those two were byte-identical duplicates of each other and of
+        this one, and none of the three actually mixed tabs and spaces; genuinely
+        mixed tab/space indentation at the same nesting level is invalid Python
+        (CPython itself raises TabError on it), so densify is not obliged to turn
+        it into valid Python and no such fixture belongs here.)"""
         src = "def f():\n\tif x:\n\t\ty = 1\n"
         result = densify(src, "a.py")
         ast.parse(result)
@@ -167,15 +159,23 @@ class TestMinreadCLI(unittest.TestCase):
         test_file = self.tmp_path / "test.ts"
         test_file.write_text("// comment\nconst x = 1;\n")
 
-        rc = self.cli.main([str(test_file)])
+        # minor fix: capture stdout too -- minread's densified output was leaking
+        # onto the real stdout during a full suite run.
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            rc = self.cli.main([str(test_file)])
         self.assertEqual(rc, 0)
+        self.assertIn("const x = 1;", buf.getvalue())
 
     def test_minread_returns_1_on_missing_file(self):
         """Error case: file does not exist."""
         missing_file = self.tmp_path / "missing.ts"
 
-        rc = self.cli.main([str(missing_file)])
+        buf = io.StringIO()
+        with redirect_stderr(buf):
+            rc = self.cli.main([str(missing_file)])
         self.assertEqual(rc, 1)
+        self.assertIn("minread:", buf.getvalue())
 
     def test_minread_returns_2_on_no_arguments(self):
         """Usage error: no arguments provided."""
@@ -193,22 +193,24 @@ class TestMinreadCLI(unittest.TestCase):
 
     def test_minread_returns_2_on_directory_as_path(self):
         """Usage error: directory path instead of file."""
-        rc = self.cli.main([str(self.tmp_path)])
+        buf = io.StringIO()
+        with redirect_stderr(buf):
+            rc = self.cli.main([str(self.tmp_path)])
         # Should fail with OSError (IsADirectoryError), return code 1
         self.assertEqual(rc, 1)
+        self.assertIn("minread:", buf.getvalue())
 
     def test_minread_prints_diagnostic_on_unclosed_block_comment(self):
         """Diagnostic printed to stderr when block comment is unclosed."""
         test_file = self.tmp_path / "test.ts"
         test_file.write_text("const a = 1;\n/* start\nconst leaked = 2;\n")
 
-        buf = io.StringIO()
-        with redirect_stderr(buf):
+        out_buf, err_buf = io.StringIO(), io.StringIO()
+        with redirect_stdout(out_buf), redirect_stderr(err_buf):
             rc = self.cli.main([str(test_file)])
 
         self.assertEqual(rc, 0)
-        stderr_output = buf.getvalue()
-        self.assertIn("unclosed block comment", stderr_output)
+        self.assertIn("unclosed block comment", err_buf.getvalue())
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,5 +1,14 @@
 # Minify Harness Implementation Plan
 
+> **Status note:** All 15 tasks below were implemented, reviewed and fixed across
+> multiple rounds. Every ruling made during and after that process — including
+> corrections to this plan's own reference code and designs it got wrong (formatter
+> capability sets, the churn-fraction denominator, the dense-Python re-indentation
+> scheme, the settings.json atomicity, and others) — is recorded in
+> `.superpowers/sdd/PLAN/progress.md`, which is the authoritative execution ledger.
+> Where this plan's prose or reference code differs from the ledger, the ledger wins;
+> this file is not being rewritten to match it after the fact.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship a harness that makes Claude Code emit minified code, restores readable formatting with the project's own formatter at every turn end, and reports what the minified emission saved.

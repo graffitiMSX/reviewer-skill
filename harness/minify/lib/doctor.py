@@ -43,7 +43,15 @@ def verdict(cwd, home=None):
     repo_clean, checked, truncated, tracked_total = None, 0, False, 0
     probe = detect(cwd, CLEAN_PROBE_EXT)
     if probe is not None and probe.per_file:
-        tracked = _tracked(cwd, sorted(COLLAPSE | DENSE))
+        # FIX 2: hand the probe only the extensions it genuinely claims, not every
+        # COLLAPSE|DENSE extension -- real prettier errors on a tracked .sh or .py,
+        # which made check_many's single batch invocation report the whole sample
+        # dirty even when every file the probe can actually parse was clean. An
+        # extension counts as "the probe's own" when detect() independently returns
+        # the identical formatter for it (same .name).
+        probe_exts = sorted(e for e in (COLLAPSE | DENSE)
+                             if (df := detect(cwd, e)) is not None and df.name == probe.name)
+        tracked = _tracked(cwd, probe_exts)
         if tracked is not None:
             files, tracked_total = tracked
             checked = len(files)

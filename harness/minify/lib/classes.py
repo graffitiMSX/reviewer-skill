@@ -11,6 +11,12 @@ EXCLUDE_NAMES = frozenset({
 EXCLUDE_GLOBS = ("docker-compose*.yml", "docker-compose*.yaml", ".env", ".env.*", "*.lock")
 EXCLUDE_DIRS = ("migrations",)
 
+def ext_of(path):
+    """Lowercased extension of a path's basename, without the dot; "" if none.
+    Single source of truth for this idiom -- language knowledge lives here."""
+    name = os.path.basename(path)
+    return name.rsplit(".", 1)[1].lower() if "." in name else ""
+
 def classify(path):
     """Return "collapse", "dense" or "exclude" for a file path."""
     name = os.path.basename(path)
@@ -21,7 +27,7 @@ def classify(path):
         return "exclude"
     if any(d in EXCLUDE_DIRS for d in parts[:-1]):
         return "exclude"
-    ext = name.rsplit(".", 1)[1].lower() if "." in name else ""
+    ext = ext_of(path)
     if ext in COLLAPSE:
         return "collapse"
     if ext in DENSE:

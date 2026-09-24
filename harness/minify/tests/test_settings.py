@@ -1,4 +1,5 @@
-import json, tempfile, unittest
+import json, os, tempfile, unittest
+import unittest.mock as mock
 from pathlib import Path
 from harness.minify.lib.settings import MARKER, SettingsError, patch, unpatch
 
@@ -114,6 +115,77 @@ class TestPatch(unittest.TestCase):
         second_backup = backup_path.read_text()
         self.assertEqual(first_backup, second_backup)
         self.assertEqual(json.loads(second_backup), EXISTING)
+
+    # -- FIX 8: unpatch also takes a backup ------------------------------------
+
+    def test_unpatch_creates_a_backup(self):
+        patch(str(self.p), self.root)
+        unpatch(str(self.p))
+        backup = Path(str(self.p) + ".minify-bak")
+        self.assertTrue(backup.exists())
+
+    def test_unpatch_on_a_never_installed_file_creates_no_backup(self):
+        # Nothing to remove -- unpatch is a genuine no-op, so it must not spuriously
+        # create (or overwrite) a backup of a state nothing is about to change.
+        unpatch(str(self.p))
+        self.assertFalse(Path(str(self.p) + ".minify-bak").exists())
+
+    # -- FIX 8: atomic writes ---------------------------------------------------
+
+    def test_save_failure_leaves_real_settings_untouched(self):
+        """Simulates a crash mid-write (e.g. ENOSPC, which this machine actually hit
+        during this project's own development). The write must go to a temp file
+        first, so a failure there must never truncate or corrupt the real file."""
+        original = self.p.read_bytes()
+        with mock.patch("harness.minify.lib.settings.json.dump",
+                         side_effect=OSError("No space left on device")):
+            with self.assertRaises(OSError):
+                patch(str(self.p), self.root)
+        self.assertEqual(self.p.read_bytes(), original)
+        leftovers = [f.name for f in self.p.parent.iterdir()
+                     if f.name.startswith(".minify-harness-") and f.name.endswith(".tmp")]
+        self.assertEqual(leftovers, [])
+
+    def test_save_writes_atomically_via_replace(self):
+        """The temp file must live in the same directory as the target (so
+        os.replace is atomic on the same filesystem) and must be gone afterwards --
+        proof the write went through a temp-then-replace path rather than truncating
+        settings.json in place."""
+        seen_tmp_paths = []
+        real_replace = os.replace
+        def spying_replace(src, dst):
+            seen_tmp_paths.append(src)
+            return real_replace(src, dst)
+        with mock.patch("harness.minify.lib.settings.os.replace", side_effect=spying_replace):
+            patch(str(self.p), self.root)
+        self.assertEqual(len(seen_tmp_paths), 1)
+        self.assertEqual(os.path.dirname(seen_tmp_paths[0]), str(self.p.parent))
+        self.assertNotEqual(seen_tmp_paths[0], str(self.p))
+        self.assertFalse(os.path.exists(seen_tmp_paths[0]))  # replaced away
+
+    # -- Minor: settings.json whose top level is valid JSON but not an object ---
+
+    def test_non_object_json_raises_settings_error_not_attributeerror(self):
+        for literal in ("[]", "null", '"x"', "42"):
+            with self.subTest(literal=literal):
+                self.p.write_text(literal)
+                before = self.p.read_bytes()
+                with self.assertRaises(SettingsError):
+                    patch(str(self.p), self.root)
+                self.assertEqual(self.p.read_bytes(), before)
+
+    # -- Minor: _load must not treat every OSError as "no file yet" -------------
+
+    def test_permission_denied_is_not_treated_as_no_file_yet(self):
+        """A blanket `except OSError` would silently treat permission-denied the
+        same as a missing file and proceed to try to overwrite it. Narrowed to
+        FileNotFoundError only, so anything else propagates."""
+        self.p.chmod(0o000)
+        try:
+            with self.assertRaises(PermissionError):
+                patch(str(self.p), self.root)
+        finally:
+            self.p.chmod(0o644)  # allow tempdir cleanup
 
 if __name__ == "__main__":
     unittest.main()

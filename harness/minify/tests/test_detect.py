@@ -120,6 +120,33 @@ class TestDetect(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("embedded null byte", err)
 
+    def test_every_collapse_or_dense_ext_has_no_or_genuine_formatter(self):
+        """FIX 1 regression guard: detect() must never return a formatter for an
+        extension it cannot actually handle. Expected support below is a ground-truth
+        mapping of what real prettier/ruff genuinely parse, independent of detect.py's
+        own capability sets, so a regression that re-widens one of those sets (e.g.
+        re-adding svg to whatever feeds the prettier branch) is caught here rather
+        than only after shipping (verified against real prettier: `--file-info` on a
+        .svg reports inferredParser: null and `--write` exits 2)."""
+        from harness.minify.lib.classes import COLLAPSE, DENSE
+        fake_bin(self.root / "node_modules/.bin/prettier")
+        fake_bin(self.root / ".venv/bin/ruff")
+        prettier_capable = {"ts", "tsx", "js", "jsx", "mjs", "cjs", "css", "scss", "json", "html"}
+        ruff_capable = {"py"}
+        for ext in sorted(COLLAPSE | DENSE):
+            f = detect(str(self.root), ext)
+            if ext in prettier_capable or ext in ruff_capable:
+                self.assertIsNotNone(f, f".{ext} should have a formatter")
+            else:
+                self.assertIsNone(f, f".{ext} has no real formatter and must not claim one (got {f})")
+
+    def test_svg_has_no_formatter_even_with_prettier_present(self):
+        """The specific defect FIX 1 closes: prettier cannot parse svg, so detect()
+        must not offer it just because svg used to share NODE_EXTS with prettier's
+        real extensions."""
+        fake_bin(self.root / "node_modules/.bin/prettier")
+        self.assertIsNone(detect(str(self.root), "svg"))
+
     def test_check_many_missing_executable_degrades_gracefully(self):
         """A formatter whose binary vanished between detect() and use raises OSError (FileNotFoundError);
         check_many must catch it, not propagate it."""

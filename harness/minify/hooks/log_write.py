@@ -4,7 +4,7 @@ import datetime as dt, json, os, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from harness.minify.lib.classes import classify
+from harness.minify.lib.classes import classify, ext_of
 from harness.minify.lib.estimate import chars, estimate, load_k
 from harness.minify.lib import events as E
 
@@ -45,8 +45,7 @@ def main(stdin_text, home=None):
         if cls == "exclude":
             return 0
         k, _ = load_k()
-        basename = os.path.basename(rel)
-        ext = basename.rsplit(".", 1)[1].lower() if "." in basename else ""
+        ext = ext_of(rel)
         E.append(cwd, session, {
             "k": "write",
             "ts": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),

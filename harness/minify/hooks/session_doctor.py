@@ -23,4 +23,8 @@ def main(stdin_text, home=None):
     return 0
 
 if __name__ == "__main__":
-    sys.exit(main(sys.stdin.read()))
+    try:
+        stdin_text = sys.stdin.read()
+    except Exception:
+        sys.exit(0)
+    sys.exit(main(stdin_text))

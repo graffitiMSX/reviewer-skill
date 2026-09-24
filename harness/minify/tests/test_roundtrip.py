@@ -2,7 +2,9 @@ import ast, json, subprocess, tempfile, unittest
 from pathlib import Path
 from harness.minify.lib.detect import detect
 
-F = Path("harness/minify/tests/fixtures/pairs")
+# Path(__file__)-relative, not cwd-relative (minor fix -- matches test_install.py's
+# existing pattern).
+F = Path(__file__).resolve().parent / "fixtures" / "pairs"
 
 def prettier():
     """The repo's own prettier, or None. TS/CSS proofs need a real formatter."""

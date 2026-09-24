@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 # harness/minify/hooks/format_turn.py
 """Stop hook. Formats the files this turn touched and records both token counts."""
-import datetime as dt, json, os, sys
+import datetime as dt, fcntl, json, os, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from harness.minify.lib.classes import classify
+from harness.minify.lib.classes import classify, ext_of
 from harness.minify.lib.estimate import chars, estimate, load_k
-from harness.minify.lib.churn import churn_outside, git_pre_image
+from harness.minify.lib.churn import CHURN_LINES, CHURN_FRACTION, churn_outside, git_pre_image
 from harness.minify.lib.detect import detect
 from harness.minify.lib import events as E, unsafe as U
-
-CHURN_LINES = 20
-CHURN_FRACTION = 0.3
 
 def _files_this_turn(rows, turn):
     """Ordered unique files written this turn, with the tools that wrote them."""
@@ -35,6 +32,16 @@ def _emit(messages):
         "hookSpecificOutput": {"hookEventName": "Stop", "systemMessage": text},
     }))
 
+def _is_contained(rel):
+    """False for an absolute path or one with a `..` component. FIX 7: format_turn
+    is the component that writes to disk (fmt.format runs --write on the joined
+    path), so it must not trust a persisted row's `file` field just because
+    log_write's own containment guard is sound today -- the log is a file, not a
+    value this hook controls."""
+    if os.path.isabs(rel):
+        return False
+    return ".." not in Path(rel).parts
+
 def _process_file(cwd, session, turn, rel, ops, k, home, messages):
     """Measure, format, and re-measure a single file, appending its own row.
 
@@ -42,13 +49,14 @@ def _process_file(cwd, session, turn, rel, ops, k, home, messages):
     a permission problem, a disk error mid-append) -- the caller guards each file
     individually so one file's exception never stops the files that follow it.
     """
+    if not _is_contained(rel):
+        return
     if classify(rel) == "exclude":
         return
     abspath = os.path.join(cwd, rel)
     if not os.path.isfile(abspath):
         return
-    basename = os.path.basename(rel)
-    ext = basename.rsplit(".", 1)[1].lower() if "." in basename else ""
+    ext = ext_of(rel)
     mine = Path(abspath).read_text(errors="replace")
     row = {"k": "measure",
            "ts": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
@@ -56,7 +64,7 @@ def _process_file(cwd, session, turn, rel, ops, k, home, messages):
            "ops": ops, "style": E.active_style(cwd, home),
            "chars_min": chars(mine), "tok_min": estimate(mine, k),
            "chars_fmt": None, "tok_fmt": None,
-           "churn_outside": None, "pre_image": "git:HEAD"}
+           "churn_outside": None, "lines_fmt": None, "pre_image": "unavailable"}
 
     fmt = detect(cwd, ext)
     if fmt is None or not fmt.per_file:
@@ -69,7 +77,13 @@ def _process_file(cwd, session, turn, rel, ops, k, home, messages):
         return
 
     row["formatter"] = fmt.name
+    # git_pre_image distinguishes a genuine "no pre-image" answer ("": untracked,
+    # unborn HEAD, or not a repo) from a retrieval failure (None: git raised, a NUL
+    # byte, undecodable content) -- a transient failure must not silently read as a
+    # new file in the log. churn_outside still gets "" either way, matching the
+    # existing (parked) conservative behavior for files with no usable pre-image.
     pre = git_pre_image(cwd, rel)
+    row["pre_image"] = "git:HEAD" if pre is not None else "unavailable"
     ok, err = fmt.format(abspath)
     if not ok:
         row["formatter_ok"] = False
@@ -78,11 +92,12 @@ def _process_file(cwd, session, turn, rel, ops, k, home, messages):
         return
 
     after = Path(abspath).read_text(errors="replace")
-    outside = churn_outside(pre, mine, after)
-    row.update({"formatter_ok": True, "chars_fmt": chars(after),
-                "tok_fmt": estimate(after, k), "churn_outside": outside})
-    E.append(cwd, session, row, home=home)
+    outside = churn_outside(pre or "", mine, after)
     nlines = max(1, len(after.splitlines()))
+    row.update({"formatter_ok": True, "chars_fmt": chars(after),
+                "tok_fmt": estimate(after, k), "churn_outside": outside,
+                "lines_fmt": nlines})
+    E.append(cwd, session, row, home=home)
     if outside > CHURN_LINES or outside > CHURN_FRACTION * nlines:
         messages.append(f"formatting {rel} caused churn on {outside} lines you did not edit")
 
@@ -96,13 +111,27 @@ def main(stdin_text, home=None):
     except (ValueError, KeyError, TypeError):
         return 0
 
-    lock = E.harness_dir(cwd, home) / f"{session}.lock"
+    lock_path = E.harness_dir(cwd, home) / f"{session}.lock"
     try:
-        lock.parent.mkdir(parents=True, exist_ok=True)
-        fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        os.close(fd)
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        lock_fd = os.open(str(lock_path), os.O_CREAT | os.O_RDWR, 0o644)
     except OSError:
-        return 0  # a Stop hook already running for this session
+        return 0  # cannot even open/create the lock file; degrade silently
+
+    # FIX 3: fcntl.flock on an open fd, not O_CREAT|O_EXCL existence. The kernel
+    # releases an flock when the holding process dies for any reason (SIGKILL, the
+    # host's own 60s hook timeout), which removes the stale-lock failure mode
+    # entirely rather than mitigating it -- an O_EXCL file left behind by a killed
+    # process silently disables the harness for the rest of the session. The lock
+    # file itself is kept (never unlinked); only the advisory lock on it is taken
+    # and released.
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        os.close(lock_fd)
+        _emit(["Stop hook already running for this session (lock held); "
+               "this turn was not measured or formatted"])
+        return 0
 
     messages = []
     try:
@@ -123,11 +152,16 @@ def main(stdin_text, home=None):
         messages.append(f"internal error: {type(e).__name__}: {e}")
     finally:
         try:
-            lock.unlink()
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
         except OSError:
             pass
+        os.close(lock_fd)
     _emit(messages)
     return 0
 
 if __name__ == "__main__":
-    sys.exit(main(sys.stdin.read()))
+    try:
+        stdin_text = sys.stdin.read()
+    except Exception:
+        sys.exit(0)
+    sys.exit(main(stdin_text))

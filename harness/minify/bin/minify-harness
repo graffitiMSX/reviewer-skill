@@ -6,7 +6,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from harness.minify.lib import events as E, unsafe as U
 from harness.minify.lib.doctor import verdict
-from harness.minify.lib.report import by_lang, dedupe, measures, render
+from harness.minify.lib.report import _pct, by_lang, dedupe, measures, render
+
+def _style_label(rows):
+    """DESIGN.md:232 specifies `style=` in the scope line; its absence let `report
+    --all` silently mix armed (minified) and baseline sessions with no visual cue
+    (minor fix). Rows with no `style` (the output style was never armed) are
+    labelled "baseline", matching the event schema's own description of them."""
+    styles = sorted({r.get("style") or "baseline" for r in rows})
+    return ",".join(styles) if styles else "-"
 
 def _report(args, home, cwd):
     if args.all:
@@ -16,6 +24,7 @@ def _report(args, home, cwd):
         paths = [p] if p else []
         scope = f"SESSION {p.stem[:8] if p else '-'}"
     rows = measures(paths)
+    scope += f"   style={_style_label(rows)}"
     if args.by_lang:
         groups = by_lang(dedupe(rows))
         if not groups:
@@ -24,8 +33,9 @@ def _report(args, home, cwd):
         print(scope, "\n")
         print(f"  {'ext':6} {'files':>5} {'tok_min':>8} {'tok_fmt':>8} {'saved':>7}")
         for g in groups:
-            pct = round(100 * g["saved"] / g["tok_fmt"]) if g["tok_fmt"] else 0
-            print(f"  {g['ext']:6} {g['files']:5} {g['tok_min']:8} {g['tok_fmt']:8} {g['saved']:6} {pct:3}%")
+            # _pct, not round(): half-up rounding must hold everywhere (minor fix).
+            pct = _pct(g["saved"], g["tok_fmt"])
+            print(f"  {g['ext']:6} {g['files']:5} {g['tok_min']:8} {g['tok_fmt']:8} {g['saved']:6} {pct:>4}")
         return 0
     print(render(rows, scope=scope, chars=args.chars, turns=args.turns), end="")
     return 0

@@ -7,6 +7,12 @@ Two diffs, both expressed in `mine` coordinates:
 """
 import difflib, subprocess
 
+# Single definition shared by hooks/format_turn.py (the turn-end warning) and
+# lib/report.py (excluding a churn-heavy row from the aggregate and headline) --
+# two independent copies of these numbers could drift out of sync (FIX 6).
+CHURN_LINES = 20
+CHURN_FRACTION = 0.3
+
 def _ops(a, b):
     return difflib.SequenceMatcher(None, a.splitlines(), b.splitlines()).get_opcodes()
 
@@ -31,10 +37,15 @@ def churn_outside(pre, mine, fmt):
     return len(changed_a(mine, fmt) - changed_b(pre, mine))
 
 def git_pre_image(root, rel):
-    """Content of `rel` at HEAD, or "" when untracked, unborn, or not a repo."""
+    """Content of `rel` at HEAD; "" when untracked, unborn, or not a repo (git ran
+    and told us there is no such blob); None when retrieval failed outright (git
+    could not be invoked or its output could not be read: missing binary, an
+    embedded NUL, undecodable content). Distinguishing the two matters -- a
+    transient failure must not silently read as "new file" the way both used to
+    collapse to the same "" (minor, FIX 6 ledger note)."""
     try:
         p = subprocess.run(["git", "show", f"HEAD:{rel}"], cwd=root,
                            capture_output=True, text=True, timeout=15)
     except (OSError, subprocess.SubprocessError, ValueError, UnicodeDecodeError):
-        return ""
+        return None
     return p.stdout if p.returncode == 0 else ""
