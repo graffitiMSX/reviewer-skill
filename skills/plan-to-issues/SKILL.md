@@ -1,6 +1,6 @@
 ---
 name: plan-to-issues
-description: Turn an approved remediation action plan into traceable GitHub issues that follow the target repo's own issue templates, labels and title conventions — drafts one ticket per action, shows a summary for confirmation, then creates the issues with gh in dependency order. Use when the user wants an action plan, backlog or findings turned into GitHub issues or tickets, or says "create the issues", "open tickets for the plan", "file this as issues". Stage 3 of the remediation pipeline (design-review → action-plan → plan-to-issues → dispatch-fixes).
+description: Turn an approved remediation action plan into traceable GitHub issues that follow the target repo's own issue templates, labels and title conventions — drafts one ticket per action, shows a summary for confirmation, then creates the issues with gh in dependency order. Use when the user wants an action plan, backlog or findings turned into GitHub issues or tickets. Stage 3 of the remediation pipeline (design-review → action-plan → plan-to-issues → dispatch-fixes).
 ---
 
 # Plan to Issues

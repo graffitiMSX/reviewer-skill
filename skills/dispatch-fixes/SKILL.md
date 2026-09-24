@@ -1,6 +1,6 @@
 ---
 name: dispatch-fixes
-description: Group open remediation GitHub issues into low-conflict batches, write an agent brief per group, dispatch fix-agent coding agents on branches named by the repo's own conventions, then drive integration — validate PRs, ask before merging into the working branch, promote, verify, comment on and close issues. Use when the user wants the remediation issues implemented, says "dispatch agents", "fix the issues", "start working the backlog", or asks to promote fixes. Stage 4 of the remediation pipeline (design-review → action-plan → plan-to-issues → dispatch-fixes).
+description: Group open remediation GitHub issues into low-conflict batches, write an agent brief per group, dispatch fix-agent coding agents on branches named by the repo's own conventions, then drive integration — validate PRs, ask before merging into the working branch, promote, verify, comment on and close issues. Use when the user wants the remediation issues implemented or promoted, or says "dispatch agents". Stage 4 of the remediation pipeline (design-review → action-plan → plan-to-issues → dispatch-fixes).
 ---
 
 # Dispatch Fixes

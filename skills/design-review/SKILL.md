@@ -26,7 +26,16 @@ Stage 1 of the remediation pipeline. Runs one or more lenses and produces `docs/
    Write your complete lens report to <lens output path>. Reply with only the executive assessment and the prioritization matrix.
    ```
    If the Agent tool is unavailable, read the agent files in `../../agents/` (relative to this skill) and run the lenses yourself, one at a time.
-3. **Merge** into `design-review.md` following the "Merged report" section of `references/conventions.md`: one executive assessment across lenses, the system map, a cross-lens root-cause list (two lenses reporting the same cause: keep the deeper analysis, link the other IDs), one combined prioritization matrix with every finding, the handoffs marked answered or open, then each lens section verbatim. Delegate the merge to an agent when the lens files are long; it only needs the five files and the conventions. Keep the per-lens files; they are the evidence trail.
+3. **Merge in two steps.** First write only the cross-lens header to `design-review.md`, following the "Merged report" section of `references/conventions.md`: one executive assessment across lenses, the system map, a cross-lens root-cause list (two lenses reporting the same cause: keep the deeper analysis, link the other IDs), one combined prioritization matrix with every finding, and the handoffs marked answered or open. Delegate that to an agent when the lens files are long; it only needs the five files and the conventions. Then append the lens reports with the shell — never by re-emitting them, which costs a full copy of every lens report in output tokens and risks silent paraphrase:
+   ```bash
+   for l in architecture backend frontend ux security; do
+     f=docs/remediation/design-review-$l.md
+     if [ -f "$f" ]; then
+       { printf '\n\n# Lens: %s\n\n' "$l"; cat "$f"; } >> docs/remediation/design-review.md
+     fi
+   done
+   ```
+   Keep the per-lens files; they are the evidence trail.
 4. **Check the merged report** against the gate below; send gaps back to the lens agent rather than filling them yourself.
 5. **Present** the executive assessment, the three most important actions and the combined matrix. Offer `/action-plan` as the next stage.
 

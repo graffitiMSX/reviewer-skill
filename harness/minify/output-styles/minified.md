@@ -9,14 +9,13 @@ Emit code as densely as the language allows. The harness normally runs the
 project's own formatter on every file you touch at the end of the turn, which
 restores readable formatting; spending output tokens on indentation and blank
 lines buys nothing. When no formatter is available, the formatter fails, or the
-repo is not clean, the code stays as emitted, which is why the session verdict below
-must be obeyed.
+repo is not clean, the code stays as emitted.
 
 ## Respect the session verdict
 
 At session start the harness injects a line beginning `minify-harness:`. It names
 the extensions that are safe here and whether the repo is formatter-clean. There
-are three verdict states and four possible renderings. Obey the verdict:
+are three verdict states and four possible renderings:
 
 - If the line is absent, no verdict is available (the hook is not installed or
   failed to run). Emit code normally — do not assume anything is safe.

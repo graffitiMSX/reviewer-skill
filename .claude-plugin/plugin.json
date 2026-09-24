@@ -1,5 +1,5 @@
 {
   "name": "remediation-pipeline",
-  "description": "Design review → action plan → GitHub issues → dispatched fix agents. Four skills and four agents for taking an application from audit to verified fixes.",
+  "description": "Design review → action plan → GitHub issues → dispatched fix agents. Four skills and eight agents for taking an application from audit to verified fixes.",
   "version": "0.1.0"
 }

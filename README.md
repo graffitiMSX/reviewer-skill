@@ -9,7 +9,7 @@ Claude Code skills and subagents that take an application from design review to 
 | 3 | `/plan-to-issues` | `ticket-writer` (drafts only) | plan | `tickets.md`; tickets `T-nn`, then GitHub issues |
 | 4 | `/dispatch-fixes` | `fix-agent` × N (one per group, own worktree) | open issues + plan | `dispatch.md`; groups `G-nn`, branches, PRs |
 
-Stages 3 and 4 change external state (GitHub issues, merges, promotion to `stage`) and always stop for explicit approval first.
+Stages 3 and 4 change external state (GitHub issues, merges, promotion to whatever branch the target repo promotes to) and always stop for explicit approval first.
 
 ## Stage 1: design review
 
@@ -56,6 +56,6 @@ mkdir -p ~/.claude/agents && ln -s "$PWD"/agents/*.md ~/.claude/agents/
 
 ## Notes
 
-- All reviewer and planner agents are read-only (`Read`, `Grep`, `Glob`, `Bash`); only `fix-agent` can write, and it never merges, closes issues or touches `stage`.
+- All reviewer and planner agents are read-only (`Read`, `Grep`, `Glob`, `Bash`); only `fix-agent` can write, and it never merges, closes issues or pushes to the promotion branch.
 - Agents use `model: inherit`. Set a specific model in an agent's frontmatter to run cheaper fix agents.
 - The skills' eval workspaces (`skills/*-workspace/`) are git-ignored.
