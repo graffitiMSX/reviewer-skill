@@ -1,6 +1,6 @@
 import json, tempfile, unittest
 from pathlib import Path
-from harness.minify.lib.settings import MARKER, patch, unpatch
+from harness.minify.lib.settings import MARKER, SettingsError, patch, unpatch
 
 EXISTING = {
     "permissions": {"defaultMode": "auto"},
@@ -76,6 +76,44 @@ class TestPatch(unittest.TestCase):
         patch(str(self.p), self.root)
         self.assertEqual(self.load()["theme"], "dark")
         self.assertTrue(any("format_turn.py" in c for c in self.commands("Stop")))
+        unpatch(str(self.p))
+        self.assertEqual(self.load(), {"theme": "dark"})
+
+    def test_patch_on_unparseable_json_raises_and_leaves_the_file_untouched(self):
+        self.p.write_text("{not valid json")
+        before = self.p.read_bytes()
+        with self.assertRaises(SettingsError):
+            patch(str(self.p), self.root)
+        self.assertEqual(self.p.read_bytes(), before)
+        self.assertFalse(Path(str(self.p) + ".minify-bak").exists())
+
+    def test_marker_is_independent_of_the_root_path(self):
+        # A root whose name does not contain "minify" must still be detected as
+        # ours on a second patch, and fully removable by unpatch.
+        root = "/opt/some-other-checkout-name"
+        patch(str(self.p), root)
+        patch(str(self.p), root)
+        self.assertEqual(len([c for c in self.commands("Stop") if MARKER in c]), 1)
+        unpatch(str(self.p))
+        self.assertEqual(self.load(), EXISTING)
+
+    def test_patching_again_with_a_different_root_replaces_the_stale_command(self):
+        patch(str(self.p), "/opt/harness-a")
+        patch(str(self.p), "/opt/harness-b")
+        for event in ("SessionStart", "PostToolUse", "Stop"):
+            ours = [c for c in self.commands(event) if MARKER in c]
+            self.assertEqual(len(ours), 1)
+            self.assertIn("harness-b", ours[0])
+            self.assertNotIn("harness-a", ours[0])
+
+    def test_second_install_does_not_overwrite_the_backup(self):
+        patch(str(self.p), self.root)
+        backup_path = Path(str(self.p) + ".minify-bak")
+        first_backup = backup_path.read_text()
+        patch(str(self.p), self.root)
+        second_backup = backup_path.read_text()
+        self.assertEqual(first_backup, second_backup)
+        self.assertEqual(json.loads(second_backup), EXISTING)
 
 if __name__ == "__main__":
     unittest.main()

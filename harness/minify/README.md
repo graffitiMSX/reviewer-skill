@@ -16,7 +16,7 @@ re-read that the number does not net out, so treat it as "savings on emitted cod
 not "savings on the session".
 
 Tests: `python3 -m unittest discover -s harness/minify/tests -t .` from the repo root.
-Three round-trip tests skip unless the project has a local prettier.
+Seven round-trip tests skip unless the project has a local prettier.
 
 The harness lives in `harness/minify/` within this checkout. `install.sh` symlinks
 into `~/.claude/` and writes hook commands into `~/.claude/settings.json` that embed
