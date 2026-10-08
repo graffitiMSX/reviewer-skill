@@ -25,6 +25,7 @@ Stage 1 of the remediation pipeline. Runs one or more lenses and produces `docs/
    Conventions: read <this skill's directory>/references/conventions.md first.
    Write your complete lens report to <lens output path>. Reply with only the executive assessment, the scorecard and the prioritization matrix.
    ```
+   A reviewer sometimes returns the whole report in its reply instead of writing the file. Save that reply to the lens path yourself, unchanged and in the report's section order, before merging: the scorecard script and the merge both read the files.
    If the Agent tool is unavailable, read the agent files in `../../agents/` (relative to this skill) and run the lenses yourself, one at a time.
 3. **Merge in two steps.** First write only the cross-lens header to `design-review.md`, following the "Merged report" section of `references/conventions.md`: one executive assessment across lenses, the scorecard, the system map, a cross-lens root-cause list (two lenses reporting the same cause: keep the deeper analysis, link the other IDs), one combined prioritization matrix with every finding, and the handoffs marked answered or open. Delegate that to an agent when the lens files are long; it only needs the five files and the conventions. Then append the lens reports with the shell — never by re-emitting them, which costs a full copy of every lens report in output tokens and risks silent paraphrase:
    ```bash

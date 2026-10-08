@@ -1,0 +1,30 @@
+{
+  "skill_name": "design-rereview",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "Faz um re-review do backend do AssinAi desde a primeira revisão de design, e me mostra se a nota melhorou. O código atual é o da branch stage.",
+      "expected_output": "A lens re-review with a status for every baseline finding backed by current code, new findings from the changed code, baseline and current grades per aspect, and a computed before/after comparison.",
+      "files": [],
+      "assertions": [
+        "Every baseline finding of the lens has exactly one status, with evidence from the current code",
+        "No finding is marked Fixed on the strength of a closed issue or merged PR alone",
+        "The current scorecard grades every numbered check of the lens and passes the cap checks",
+        "Baseline grades are taken from the baseline scorecard, or labelled reconstructed when it has none",
+        "scripts/compare.py exits zero and its comparison appears unchanged in the merged report",
+        "New findings or regressions in the changed code are listed, or the lens states it found none",
+        "The report names the baseline commit and the current commit it compared"
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "we closed most of the security issues from last month's audit. can you check what's actually still open and give me a before/after score?",
+      "expected_output": "A security-lens re-review that verifies fixes in code rather than trusting closed issues, and a partial before/after score labelled as security only.",
+      "files": [],
+      "assertions": [
+        "Only the security lens runs, and the score is labelled partial",
+        "Findings whose issue is closed but whose defect is still in the code are reported as Open or Partially fixed"
+      ]
+    }
+  ]
+}

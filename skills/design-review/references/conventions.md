@@ -49,6 +49,7 @@ Every lens grades each of its aspects from 0 to 10, and the merged report adds a
 **Caps.** A grade is a ceiling as well as a judgement, so a single number can never hide a serious finding:
 - A Confirmed or Likely Critical finding caps its aspect at 3. A Confirmed or Likely High caps it at 6.
 - A finding that is only Needs verification caps one band higher, Critical at 5 and High at 7, and the row says what to verify.
+- A finding caps the aspect its defect sits in, and the `Findings` column lists only those. Every finding ID written anywhere in a row counts against that row. So when another aspect only touches a finding, for example Testing noting that a Critical defect has no test, describe it in words there and leave the ID out.
 - Use `n/a` when the system does not have the aspect at all, such as AI-specific risk with no AI surface. Use `not assessed` when it could not be inspected. Neither counts in any average. Never grade what was not looked at.
 
 **Evidence.** Each grade carries a one-line reason and the finding IDs that pulled it down. A grade of 8 or more names the strength that earned it.

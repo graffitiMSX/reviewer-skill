@@ -1,6 +1,20 @@
-skills/*-workspace/
+# Source prompts the skills were distilled from
 docs/
+
+# Generated artifacts: eval workspaces and pipeline outputs (reviews, re-reviews, plans, tickets, dispatch logs)
+skills/*-workspace/
+remediation/
+rereview-*/
+design-review.md
+design-review-*.md
+design-rereview-*.md
+action-plan.md
+tickets*.md
+dispatch.md
+
+# Local state
 __pycache__/
 *.pyc
 .claude/worktrees/
+.claude/settings.local.json
 .superpowers/
