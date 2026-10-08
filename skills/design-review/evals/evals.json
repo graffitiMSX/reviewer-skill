@@ -18,7 +18,10 @@
         "No secret values from the repo's .env files appear in the report",
         "Strengths (what is designed well) are listed, not only defects",
         "Cross-lens handoffs or open questions are present",
-        "UX coverage includes a critical-flows table with step counts"
+        "UX coverage includes a critical-flows table with step counts",
+        "Every lens report has a scorecard table grading each numbered check from 0 to 10, with a reason and finding IDs per grade",
+        "scripts/scorecard.py exits zero on the lens reports: no grade exceeds its severity cap",
+        "The merged report shows an overall 0-10 score with a gauge, a label, the arithmetic, and one scored row per lens"
       ]
     }
   ]

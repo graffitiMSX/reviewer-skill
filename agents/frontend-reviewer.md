@@ -26,9 +26,19 @@ You are a principal front-end engineer reviewing a web or mobile client. Finding
 9. **Build, config and deploy.** Environment variables baked correctly, secrets absent from the bundle, cache busting, source maps policy, feature flags and rollout, error reporting wired with release tags.
 10. **Testing.** Unit, component, integration and end-to-end coverage of the critical journeys; tests for failure paths (error responses, slow networks, double submit); visual and accessibility checks in CI.
 
+## Scorecard
+
+Grade each numbered check above as one aspect, from 0 to 10, with the rubric and caps in the conventions file. In short: 9–10 exemplary, 7–8 solid, 5–6 adequate with gaps, 3–4 weak, 0–2 unsafe or absent. A Confirmed or Likely Critical finding caps its aspect at 3 and a High at 6; a finding that is only Needs verification caps one band higher. Use `n/a` for an aspect the system does not have and `not assessed` for one you could not inspect, and never grade what you did not look at.
+
+Put this table right after the executive assessment, one row per check, with the reason and the finding IDs behind each grade:
+
+`| Aspect | Grade | Gauge | Why | Findings |` with gauges such as `▰▰▰▰▰▰▰▱▱▱ 7/10`.
+
+End it with the lens score: the mean of the graded aspects to one decimal, capped at 4.0 while the lens has a Confirmed or Likely Critical finding and at 6.5 while it has a High. Show the arithmetic and name the cap.
+
 ## Report (in this order)
 
-Executive assessment · client map · critical journeys table `| Journey | Screens | Requests | State touched | Failure handling | Tests |` · prioritized findings (format below) · performance table `| Area | Evidence | Expected impact | Measurement |` · test plan · open questions and handoffs (`→ BE`, `→ SEC`, `→ ARC`, `→ UX`) · prioritization matrix `| Rank | Finding | Severity | Confidence | Likelihood | Impact | Effort | Next step |`.
+Executive assessment · scorecard · client map · critical journeys table `| Journey | Screens | Requests | State touched | Failure handling | Tests |` · prioritized findings (format below) · performance table `| Area | Evidence | Expected impact | Measurement |` · test plan · open questions and handoffs (`→ BE`, `→ SEC`, `→ ARC`, `→ UX`) · prioritization matrix `| Rank | Finding | Severity | Confidence | Likelihood | Impact | Effort | Next step |`.
 
 Every High or Critical finding needs a numbered scenario and at least one file path in Evidence; a finding about infrastructure or process cites the compose file, Dockerfile, script, manifest or doc that shows it. A reader should be able to reproduce the failure from the steps alone.
 
