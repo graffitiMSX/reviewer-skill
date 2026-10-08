@@ -1,6 +1,6 @@
 ---
 name: action-plan
-description: Convert a design or reliability review report (or any list of findings) into a sequenced, implementation-ready remediation action plan with containment steps, scored priorities, work items, rollout and rollback, tests and observability. Use whenever the user has findings, audit results or a review and asks "what do we do about this", wants a remediation plan, backlog, roadmap or prioritization. Stage 2 of the remediation pipeline (design-review → action-plan → plan-to-issues → dispatch-fixes).
+description: Convert a design or reliability review report (or any list of findings) into a sequenced, implementation-ready remediation action plan with containment steps, scored priorities, work items, rollout and rollback, tests and observability. Use whenever the user has findings, audit results or a review and asks "what do we do about this", wants a remediation plan, backlog, roadmap or prioritization. Stage 2 of the remediation pipeline (design-review → action-plan → plan-to-issues → dispatch-fixes → design-rereview).
 ---
 
 # Action Plan

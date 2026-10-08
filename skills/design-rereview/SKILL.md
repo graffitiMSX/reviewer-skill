@@ -5,7 +5,7 @@ description: Re-review an application that already has a design review, to measu
 
 # Design Re-review
 
-Follows up `/design-review`. The first review said what was wrong and graded it. This one answers a narrower question: **what is true now, and how far did the grades move?** It produces `docs/remediation/design-rereview-<YYYY-MM-DD>.md` and never overwrites the baseline review.
+Stage 5 of the remediation pipeline (design-review → action-plan → plan-to-issues → dispatch-fixes → design-rereview), and it also works alone after any earlier `/design-review`. The first review said what was wrong and graded it. This one answers a narrower question: **what is true now, and how far did the grades move?** It produces `docs/remediation/design-rereview-<YYYY-MM-DD>.md` and never overwrites the baseline review.
 
 It is cheaper than a full review because each lens starts from the earlier findings and the code that changed, instead of mapping the system again.
 

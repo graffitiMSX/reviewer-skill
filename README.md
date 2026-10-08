@@ -1,6 +1,6 @@
 # Remediation pipeline
 
-Claude Code skills and subagents that take an application from design review to verified fixes in four stages. Each stage writes an artifact into `docs/remediation/` in the target repo, and the next stage reads it, so findings stay traceable all the way to a merged pull request.
+Claude Code skills and subagents that take an application from design review to verified fixes in five stages. Each stage writes an artifact into `docs/remediation/` in the target repo, and the next stage reads it, so findings stay traceable all the way to a merged pull request.
 
 | Stage | Skill | Agents | Reads | Writes |
 |---|---|---|---|---|
@@ -8,12 +8,11 @@ Claude Code skills and subagents that take an application from design review to 
 | 2 | `/action-plan` | `remediation-planner` (read-only) | review + repo | `action-plan.md`; actions `A-nnn` |
 | 3 | `/plan-to-issues` | `ticket-writer` (drafts only) | plan | `tickets.md`; tickets `T-nn`, then GitHub issues |
 | 4 | `/dispatch-fixes` | `fix-agent` × N (one per group, own worktree, three at a time by default) | open issues + plan | `dispatch.md`; groups `G-nn`, branches, PRs |
+| 5 | `/design-rereview [lenses]` | the same five reviewers (read-only, three at a time by default) | earlier review + current code | `design-rereview-<date>.md`; a status for every earlier finding, grades before and after |
 
 Stages 3 and 4 change external state (GitHub issues, merges, promotion to whatever branch the target repo promotes to) and always stop for explicit approval first.
 
 The skills that fan out agents (`/design-review`, `/design-rereview`, `/dispatch-fixes`) run at most three at a time. Say another number to change it, for example `/design-review max 5` or "one at a time".
-
-Once fixes have landed, `/design-rereview` closes the loop: it checks every earlier finding against the current code and compares the grades before and after.
 
 The repo also carries the [minify harness](harness/minify/README.md), which is separate from the pipeline.
 
@@ -37,7 +36,7 @@ Every finding cites concrete evidence, carries a confidence label (Confirmed / L
 - **`/plan-to-issues`** drafts one ticket per action following the target repo's own conventions: its `.github/ISSUE_TEMPLATE` types, labels, `[BUG-000]`-style titles and headings, plus any setup guide such as `docs/github_issues_setup.md`. It falls back to `skills/plan-to-issues/references/issue-template.md` when the repo has no templates. After a confirmation, `skills/plan-to-issues/scripts/create_issues.py` creates the issues with `gh` in dependency order. It fills work-item numbers after creation, rewrites `T-nn` references to real `#numbers`, creates missing template labels with their documented colors, records the mapping in `tickets.md` and resumes safely after a failure. Run it without `--create` for a dry run, and with `--fix-refs` to finish issues left with unresolved references.
 - **`/dispatch-fixes`** groups open issues into low-conflict batches and writes an agent brief per group (`skills/dispatch-fixes/references/agent-brief.md`). It names branches, commits and PRs by the repo's own workflow, for example `bugfix/351-short-desc` and `[BUG-351] …`, and confirms the working and promotion branches before dispatching. It dispatches one `fix-agent` per group in an isolated worktree, then drives integration: validate the PR, ask before merging into the working branch, ask before promoting, verify, comment on and close issues.
 
-## After the fixes: re-review
+## Stage 5: re-review
 
 `/design-rereview [lenses]` measures what changed since the first review. Each lens starts from the earlier findings and the code that changed since the baseline commit, so it costs less than a fresh review. It gives every earlier finding a status, which is Fixed, Partially fixed, Open, Regressed, Accepted or Not verifiable, each backed by the current code rather than by a closed issue. It also looks for problems the changes introduced, re-grades every aspect, and compares before and after per aspect, per lens and overall.
 

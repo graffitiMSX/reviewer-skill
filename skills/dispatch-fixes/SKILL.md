@@ -1,6 +1,6 @@
 ---
 name: dispatch-fixes
-description: Group open remediation GitHub issues into low-conflict batches, write an agent brief per group, dispatch fix-agent coding agents on branches named by the repo's own conventions, then drive integration — validate PRs, ask before merging into the working branch, promote, verify, comment on and close issues. Use when the user wants the remediation issues implemented or promoted, or says "dispatch agents". Stage 4 of the remediation pipeline (design-review → action-plan → plan-to-issues → dispatch-fixes).
+description: Group open remediation GitHub issues into low-conflict batches, write an agent brief per group, dispatch fix-agent coding agents on branches named by the repo's own conventions, then drive integration — validate PRs, ask before merging into the working branch, promote, verify, comment on and close issues. Use when the user wants the remediation issues implemented or promoted, or says "dispatch agents". Stage 4 of the remediation pipeline (design-review → action-plan → plan-to-issues → dispatch-fixes → design-rereview).
 ---
 
 # Dispatch Fixes
@@ -71,3 +71,5 @@ Never merge or close on an agent's word alone. Data migrations, security, paymen
 ## Final output
 
 Grouping summary · one brief per group · dispatch order and dependencies · status table · verification and closure checklist · blockers and decisions that need the user.
+
+When a wave of fixes is promoted and verified, suggest `/design-rereview` for the lenses those fixes touched. It checks each finding against the promoted code and shows how the grades moved, which a list of closed issues cannot.
