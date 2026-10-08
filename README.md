@@ -2,6 +2,18 @@
 
 Claude Code skills and subagents that take an application from design review to verified fixes in five stages. Each stage writes an artifact into `docs/remediation/` in the target repo, and the next stage reads it, so findings stay traceable all the way to a merged pull request.
 
+```mermaid
+flowchart LR
+    repo[(Target repo)] --> s1
+    s1["1 · /design-review<br/>five lenses, graded 0–10"] -->|design-review.md| s2
+    s2["2 · /action-plan"] -->|action-plan.md| s3
+    s3["3 · /plan-to-issues"] -->|GitHub issues| s4
+    s4["4 · /dispatch-fixes<br/>fix agents, PRs, promotion"] -->|fixed code| s5
+    s5["5 · /design-rereview<br/>status per finding, grades before and after"]
+    s1 -.->|baseline findings and grades| s5
+    s5 -.->|still open or new findings| s2
+```
+
 | Stage | Skill | Agents | Reads | Writes |
 |---|---|---|---|---|
 | 1 | `/design-review [lenses]` | `architecture-reviewer`, `backend-reviewer`, `frontend-reviewer`, `ux-reviewer`, `security-reviewer` (read-only, run in parallel, three at a time by default) | repo | `design-review.md`, merged from one file per lens; findings `F-ARC/BE/FE/UX/SEC-nnn` |
