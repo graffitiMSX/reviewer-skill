@@ -117,7 +117,10 @@ class TestVerdict(unittest.TestCase):
         prior (git-less) per_file=False test could not tell apart from this one."""
         git_repo(self.cwd, {"a.ts": "const a=1;\n"})
         (self.cwd / "package.json").write_text(json.dumps({"scripts": {"format": "prettier -w ."}}))
-        v = verdict(str(self.cwd), home=self.home)
+        # Without this, a machine where `npx --no-install prettier` resolves gets the
+        # per-file npx fallback and never reaches the npm-script formatter under test.
+        with mock.patch("harness.minify.lib.detect._npx_prettier_ok", return_value=False):
+            v = verdict(str(self.cwd), home=self.home)
         self.assertIsNone(v["repo_clean"])
         self.assertEqual(v["checked"], 0)
 
@@ -183,7 +186,10 @@ class TestVerdict(unittest.TestCase):
         """A detected formatter that can only run whole-project (npm-script:format) must not
         be offered as safe -- verdict() has to check f.per_file, not just f is not None."""
         (self.cwd / "package.json").write_text(json.dumps({"scripts": {"format": "prettier -w ."}}))
-        v = verdict(str(self.cwd), home=self.home)
+        # Without this, a machine where `npx --no-install prettier` resolves gets the
+        # per-file npx fallback and never reaches the npm-script formatter under test.
+        with mock.patch("harness.minify.lib.detect._npx_prettier_ok", return_value=False):
+            v = verdict(str(self.cwd), home=self.home)
         self.assertNotIn("ts", v["safe"])
         self.assertIn("ts", v["blocked"])
         self.assertIn("not per-file", v["blocked"]["ts"])
