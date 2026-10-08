@@ -16,7 +16,7 @@ It is cheaper than a full review because each lens starts from the earlier findi
    - **Current code.** The branch the team ships from, not whatever happens to be checked out. If other sessions use the checkout, review a clean worktree of that branch.
    - **Lenses.** Those the user named, limited to lenses the baseline actually covered. A lens with no baseline cannot be compared; offer a fresh `/design-review <lens>` for it.
 2. **Scope the change.** `git log --oneline <baseline>..<current>` and `git diff --stat <baseline>..<current>`. Give each lens the list of changed paths in its area. Closed issues and merged pull requests are useful pointers to where a fix should be, and nothing more.
-3. **Run the lenses in parallel**, one Agent call per lens with that lens's reviewer agent (`architecture-reviewer`, `backend-reviewer`, `frontend-reviewer`, `ux-reviewer`, `security-reviewer`), each writing `docs/remediation/rereview-<date>/design-rereview-<lens>.md`:
+3. **Run the lenses in parallel, three at a time.** At most three agents run at the same time, or the number the user gave ("max 5", "one at a time"). Each agent costs tokens and machine load at once, so the default stays modest. With more lenses than the limit, start the first batch in one turn and start the next lens as each one finishes. One Agent call per lens with that lens's reviewer agent (`architecture-reviewer`, `backend-reviewer`, `frontend-reviewer`, `ux-reviewer`, `security-reviewer`), each writing `docs/remediation/rereview-<date>/design-rereview-<lens>.md`:
    ```
    Re-review the <lens> lens of the application at <path>, read-only.
    Baseline review: <path to the merged report or the lens file>, your lens's section. Baseline commit: <sha>. Current code: <branch> at <sha>.

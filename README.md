@@ -4,12 +4,14 @@ Claude Code skills and subagents that take an application from design review to 
 
 | Stage | Skill | Agents | Reads | Writes |
 |---|---|---|---|---|
-| 1 | `/design-review [lenses]` | `architecture-reviewer`, `backend-reviewer`, `frontend-reviewer`, `ux-reviewer`, `security-reviewer` (read-only, run in parallel) | repo | `design-review.md`, merged from one file per lens; findings `F-ARC/BE/FE/UX/SEC-nnn` |
+| 1 | `/design-review [lenses]` | `architecture-reviewer`, `backend-reviewer`, `frontend-reviewer`, `ux-reviewer`, `security-reviewer` (read-only, run in parallel, three at a time by default) | repo | `design-review.md`, merged from one file per lens; findings `F-ARC/BE/FE/UX/SEC-nnn` |
 | 2 | `/action-plan` | `remediation-planner` (read-only) | review + repo | `action-plan.md`; actions `A-nnn` |
 | 3 | `/plan-to-issues` | `ticket-writer` (drafts only) | plan | `tickets.md`; tickets `T-nn`, then GitHub issues |
-| 4 | `/dispatch-fixes` | `fix-agent` × N (one per group, own worktree) | open issues + plan | `dispatch.md`; groups `G-nn`, branches, PRs |
+| 4 | `/dispatch-fixes` | `fix-agent` × N (one per group, own worktree, three at a time by default) | open issues + plan | `dispatch.md`; groups `G-nn`, branches, PRs |
 
 Stages 3 and 4 change external state (GitHub issues, merges, promotion to whatever branch the target repo promotes to) and always stop for explicit approval first.
+
+The skills that fan out agents (`/design-review`, `/design-rereview`, `/dispatch-fixes`) run at most three at a time. Say another number to change it, for example `/design-review max 5` or "one at a time".
 
 Once fixes have landed, `/design-rereview` closes the loop: it checks every earlier finding against the current code and compares the grades before and after.
 

@@ -41,7 +41,7 @@ Put issues together only when they share an implementation boundary (same servic
 
 Each group has a **lead issue**: the highest priority, then the lowest number. The group's branch and PR follow the repo convention for the lead issue, for example `bugfix/351-jwt-type-confusion` and PR title `[BUG-351] Reject typed JWTs as access tokens`. The PR body lists every other issue in the group.
 
-Write `dispatch.md` using this skill's `references/agent-brief.md`: one group record and one brief per group (`G-01`…), the dispatch order (parallel vs waiting on a prerequisite PR), and the status table:
+Write `dispatch.md` using this skill's `references/agent-brief.md`: one group record and one brief per group (`G-01`…), the dispatch order (parallel vs waiting on a prerequisite PR) with the concurrency limit, and the status table:
 
 `| Group | Lead issue | Issues | Branch | Agent PR | Working-branch merge | Promotion PR | Promotion verification | Issue comments | Closed |`
 
@@ -51,7 +51,7 @@ Present the grouping, the working branch, the promotion branch and its environme
 
 ## 3. Dispatch
 
-For each approved group spawn one `fix-agent` with `isolation: "worktree"`, all independent groups in the same turn. The prompt is the full brief: repo path, working branch, branch name, commit and PR title format, and "Report using your completion format." Hold dependent groups until their prerequisite PR is merged into the working branch.
+For each approved group spawn one `fix-agent` with `isolation: "worktree"`. At most three agents run at the same time, or the number the user gave ("max 5", "one at a time"). Each agent costs tokens and machine load at once, so the default stays modest. Start the first independent groups in one turn, up to the limit, and start the next group in dispatch order as each agent finishes. The prompt is the full brief: repo path, working branch, branch name, commit and PR title format, and "Report using your completion format." Hold dependent groups until their prerequisite PR is merged into the working branch.
 
 ## 4. Integrate (per group, in dispatch order)
 

@@ -16,6 +16,7 @@ This repo holds Claude Code skills, subagents and a harness. It is the source: `
 - **Models judge, scripts compute.** Grades, severities and statuses are a reviewer's judgement. Arithmetic, caps, cross-checks and anything that touches GitHub in bulk belong in a script under `scripts/`, and the skill's quality gate relies on that script's exit status.
 - **Reviewer and planner agents stay read-only** (`Read`, `Grep`, `Glob`, `Bash`). Only `fix-agent` writes code, and it never merges, closes issues or pushes to a promotion branch.
 - **A skill never changes external state without the user's approval.** Creating issues, merging, promoting and closing each stop and ask first.
+- **Parallel agents are capped.** A skill that fans out agents runs at most three at a time unless the user gives another number, and says so in its steps.
 - **Shared rules have one home.** Finding IDs, severity, confidence and the scoring rubric live in `skills/design-review/references/conventions.md`. Other skills and agents point to it; they do not restate it.
 - **Keep the docs in step.** Adding, renaming or removing a skill or agent means updating `README.md` and the description in `.claude-plugin/plugin.json` in the same commit.
 
