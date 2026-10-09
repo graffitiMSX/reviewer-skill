@@ -14,6 +14,7 @@
         "Report contains a prioritization matrix table with Rank, Finding, Severity, Confidence, Effort columns",
         "Backend coverage includes a consistency/idempotency matrix that mentions the Stripe webhook and the signing flow",
         "Security coverage includes an authorization matrix table over endpoints or jobs",
+        "Security coverage includes an OWASP Top 10 coverage table with all ten 2025 categories, and each security finding names its OWASP category or none",
         "Coverage and blind spots are stated explicitly",
         "No secret values from the repo's .env files appear in the report",
         "Strengths (what is designed well) are listed, not only defects",

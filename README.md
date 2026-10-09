@@ -38,7 +38,7 @@ The repo also carries the [minify harness](harness/minify/README.md), which is s
 | `backend` | idempotency, dual writes, concurrency, performance, resilience, queues, API contracts |
 | `frontend` | client code: state and data flow, submits, error states, forms, routing, performance, accessibility implementation, build config |
 | `ux` | the experience: task flows and friction, navigation, feedback, error recovery, copy, consistency, onboarding, responsive behavior, trust |
-| `security` | authn, authz, tenant isolation, input handling, webhooks, secrets, client security, data protection, supply chain, AI risks |
+| `security` | authn, authz, tenant isolation, input handling, webhooks, secrets, client security, data protection, supply chain, AI risks, OWASP Top 10 coverage |
 
 Every finding cites concrete evidence, carries a confidence label (Confirmed / Likely / Needs verification), a step-by-step scenario, the smallest safe fix and a verification step. Each lens also grades every aspect it checks from 0 to 10, shown as a gauge such as `▰▰▰▰▰▰▰▱▱▱ 7/10`, and the merged report adds a score per lens and one overall score. A Critical or High finding caps the grades it touches, and `skills/design-review/scripts/scorecard.py` computes the scores so the numbers never rest on a model's arithmetic. Shared rules live in `skills/design-review/references/conventions.md`.
 
