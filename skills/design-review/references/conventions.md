@@ -14,6 +14,9 @@ Every reviewer agent embeds a compact copy of these rules; this file is the refe
 ## Finding IDs
 `F-<LENS>-nnn` with LENS = ARC | BE | FE | UX | SEC, numbered in severity order within the lens. One issue per finding; a shared root cause is its own finding that links the others. When a finding belongs to another lens, note it in "Open questions / handoffs" instead of reporting it half-analyzed.
 
+## Conflict IDs
+`X-nnn`, for two or more findings whose remediations contradict each other. They are written by the `conflict-reviewer` agent in `design-review-conflicts.md`, never by a lens, and each one cites the `F-<LENS>-nnn` findings involved. The conflict types, resolution kinds and format are in that agent's file.
+
 ## Finding format
 ```
 ### F-LENS-nnn [Severity] Short title

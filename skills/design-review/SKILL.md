@@ -44,7 +44,7 @@ Stage 1 of the remediation pipeline. Runs one or more lenses and produces `docs/
 
    Keep the per-lens files; they are the evidence trail.
 4. **Check the merged report** against the gate below; send gaps back to the lens agent rather than filling them yourself.
-5. **Present** the overall score with its gauge and label, the lens scores, the executive assessment, the three most important actions and the combined matrix. Say plainly when the score is partial because fewer than five lenses ran. Offer `/action-plan` as the next stage.
+5. **Present** the overall score with its gauge and label, the lens scores, the executive assessment, the three most important actions and the combined matrix. Say plainly when the score is partial because fewer than five lenses ran. Offer `/action-plan` as the next stage, and when two or more lenses ran, offer `/design-reconcile` first: the lenses work alone, so their fixes can contradict each other.
 
 ## Quality gate
 
