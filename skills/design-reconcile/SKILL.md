@@ -11,7 +11,7 @@ It reads reports and code and writes one file. It never edits the lens reports, 
 
 ## Steps
 
-1. **Locate the reports.** Default: the per-lens files `docs/remediation/design-review-<lens>.md`, or the merged `design-review.md` when they are gone. If there is no review, say so and offer `/design-review`. With a single lens there is nothing to cross-check between lenses; say so, and run only if the user wants the check inside that lens. If an `action-plan.md` already exists, mention it: a conflict found now means some of its actions need revisiting.
+1. **Locate the reports.** Default: the per-lens files `docs/remediation/design-review-<lens>.md`, or the merged `design-review.md` when they are gone. If there is no review, say so and offer `/design-review`. With a single lens there is nothing to cross-check between lenses; say so, and run only if the user wants the check inside that lens. If an `action-plan.md` already exists, mention it: a conflict found now means some of its actions need revisiting. If the code has changed a lot since the review, say that the reviewer will flag findings that are already fixed, and that `/design-rereview` is the way to refresh them.
 2. **List the shared ground.** Finding which fixes land on the same code is mechanical, so a script does it:
    ```bash
    python3 <this skill's directory>/scripts/conflicts.py candidates docs/remediation > <scratch>/shared-paths.md
@@ -30,7 +30,7 @@ It reads reports and code and writes one file. It never edits the lens reports, 
    python3 <this skill's directory>/scripts/conflicts.py check docs/remediation/design-review-conflicts.md docs/remediation
    ```
    It exits non-zero when a conflict cites a finding that does not exist, lacks a resolution, or when the fix orders of all conflicts together form a cycle. Send those back to the agent; do not rewrite a resolution yourself.
-5. **Present** the conflict table, then the decisions that need the user, each with its options. Those are theirs to make: do not choose for them, and do not plan around an undecided one. Offer `/action-plan` next, which picks up the conflicts file.
+5. **Present** the conflict table, any conflict marked live first since it is a defect in the code today, then the decisions that need the user, each with its options. Those are theirs to make: do not choose for them, and do not plan around an undecided one. Offer `/action-plan` next, which picks up the conflicts file.
 
 ## Quality gate
 
@@ -38,4 +38,4 @@ It reads reports and code and writes one file. It never edits the lens reports, 
 - Every conflict states the concrete collision in the code or contract, and what happens when both fixes are applied as written.
 - No finding is dropped by a resolution: a `prefer` says what the other finding gets instead.
 - Trade-offs the code cannot settle are `decision`, with options, and are shown to the user.
-- Pairs that were checked and found compatible are listed, and a result of no conflicts is reported as such.
+- Identical fixes asked for by several findings are listed under plan once. Pairs that were checked and found compatible are listed, and a result of no conflicts is reported as such.
