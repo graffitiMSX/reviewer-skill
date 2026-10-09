@@ -9,11 +9,12 @@ Stage 2 of the remediation pipeline. Reads `docs/remediation/design-review.md` (
 
 ## Steps
 
-1. **Locate the input.** Default is the review report above. If none exists, ask whether to run `/design-review` first or plan from findings the user pastes. Collect constraints the user states (SLOs, deadlines, capacity, release freeze, risk tolerance) and pass them on verbatim; the planner must not invent any.
+1. **Locate the input.** Default is the review report above. If none exists, ask whether to run `/design-review` first or plan from findings the user pastes. Collect constraints the user states (SLOs, deadlines, capacity, release freeze, risk tolerance) and pass them on verbatim; the planner must not invent any. If `design-review-conflicts.md` sits next to the review (written by `/design-reconcile`), pass it too. If it is missing and the review has two or more lenses, mention that `/design-reconcile` can check the fixes against each other first, and carry on if the user does not want it.
 2. **Delegate** to the `remediation-planner` agent (read-only):
    ```
    Repository: <repo root>
    Review report: <path>
+   Conflict report: <path, or "none">
    Constraints from the user: <list, or "none given">
    Normalize the findings, validate the High and Critical ones against the code, then write the complete action plan to <output path>. Reply with only the executive action summary, the containment plan and the action prioritization table.
    ```
@@ -27,4 +28,5 @@ Stage 2 of the remediation pipeline. Reads `docs/remediation/design-review.md` (
 - Every action has priority, effort, owner profile, dependencies, acceptance criteria, rollout and rollback.
 - Data migrations include compatibility, backfill, validation and recovery; nothing is called reversible without a tested restore.
 - Unknowns became time-boxed discovery tasks; no invented incidents, volumes, owners or deadlines.
+- When a conflict report exists, every `X-nnn` is reflected: its resolved remediation is what the plan builds, its order is respected, and each `decision` is in the decision log blocking the actions that depend on it.
 - The traceability table maps every `F-<LENS>-nnn` to `A-nnn` IDs.

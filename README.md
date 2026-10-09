@@ -1,11 +1,13 @@
 # Remediation pipeline
 
-Claude Code skills and subagents that take an application from design review to verified fixes in five stages. Each stage writes an artifact into `docs/remediation/` in the target repo, and the next stage reads it, so findings stay traceable all the way to a merged pull request.
+Claude Code skills and subagents that take an application from design review to verified fixes in five stages, with an optional conflict check after the first. Each stage writes an artifact into `docs/remediation/` in the target repo, and the next stage reads it, so findings stay traceable all the way to a merged pull request.
 
 ```mermaid
 flowchart LR
     repo[(Target repo)] --> s1
     s1["1 · /design-review<br/>five lenses, graded 0–10"] -->|design-review.md| s2
+    s1 -.->|lens reports| r["/design-reconcile<br/>contradicting fixes"]
+    r -.->|design-review-conflicts.md| s2
     s2["2 · /action-plan"] -->|action-plan.md| s3
     s3["3 · /plan-to-issues"] -->|GitHub issues| s4
     s4["4 · /dispatch-fixes<br/>fix agents, PRs, promotion"] -->|fixed code| s5
@@ -17,7 +19,8 @@ flowchart LR
 | Stage | Skill | Agents | Reads | Writes |
 |---|---|---|---|---|
 | 1 | `/design-review [lenses]` | `architecture-reviewer`, `backend-reviewer`, `frontend-reviewer`, `ux-reviewer`, `security-reviewer` (read-only, run in parallel, three at a time by default) | repo | `design-review.md`, merged from one file per lens; findings `F-ARC/BE/FE/UX/SEC-nnn` |
-| 2 | `/action-plan` | `remediation-planner` (read-only) | review + repo | `action-plan.md`; actions `A-nnn` |
+| 1b | `/design-reconcile` (optional) | `conflict-reviewer` (read-only) | lens reports + repo | `design-review-conflicts.md`; conflicts `X-nnn`, each with a resolution or a decision for the team |
+| 2 | `/action-plan` | `remediation-planner` (read-only) | review, conflicts if present, repo | `action-plan.md`; actions `A-nnn` |
 | 3 | `/plan-to-issues` | `ticket-writer` (drafts only) | plan | `tickets.md`; tickets `T-nn`, then GitHub issues |
 | 4 | `/dispatch-fixes` | `fix-agent` × N (one per group, own worktree, three at a time by default) | open issues + plan | `dispatch.md`; groups `G-nn`, branches, PRs |
 | 5 | `/design-rereview [lenses]` | the same five reviewers (read-only, three at a time by default) | earlier review + current code | `design-rereview-<date>.md`; a status for every earlier finding, grades before and after |
@@ -42,6 +45,12 @@ The repo also carries the [minify harness](harness/minify/README.md), which is s
 
 Every finding cites concrete evidence, carries a confidence label (Confirmed / Likely / Needs verification), a step-by-step scenario, the smallest safe fix and a verification step. Each lens also grades every aspect it checks from 0 to 10, shown as a gauge such as `▰▰▰▰▰▰▰▱▱▱ 7/10`, and the merged report adds a score per lens and one overall score. A Critical or High finding caps the grades it touches, and `skills/design-review/scripts/scorecard.py` computes the scores so the numbers never rest on a model's arithmetic. Shared rules live in `skills/design-review/references/conventions.md`.
 
+## Between stages 1 and 2: conflict check
+
+Each lens works alone, so two lenses can prescribe fixes that cannot both hold: security shortens a session that UX wants kept alive, or two lenses redesign the same function differently. Planned as written, those fixes reopen each other's findings. `/design-reconcile` hands every lens report to one `conflict-reviewer` agent, which tests suspected pairs against the code and reports each real conflict with the concrete collision, what happens when both fixes are applied, and a resolution: one combined remediation, one fix preferred over the other, a fix order, or a decision the team has to make.
+
+`skills/design-reconcile/scripts/conflicts.py candidates` lists the paths cited by more than one finding as a starting point, and `check` refuses to pass when a conflict cites a finding that does not exist, has no resolution, or when the fix orders of all conflicts together form a cycle. `/action-plan` reads the conflicts file when it is there and plans the resolved remediation instead of both sides.
+
 ## Stages 2 to 4
 
 - **`/action-plan`** normalizes the findings, validates the High and Critical ones against the code, scores risk transparently, and produces a four-layer plan (containment, near-term, hardening, long-term) of implementation-ready work items with tests, rollout, rollback and observability.
@@ -62,8 +71,8 @@ Every finding cites concrete evidence, carries a confidence label (Confirmed / L
 
 ```
 .claude-plugin/plugin.json   plugin manifest
-agents/                      eight subagent definitions (frontmatter + system prompt)
-skills/<name>/SKILL.md       five skills, each with references/, scripts/ and evals/ as needed
+agents/                      nine subagent definitions (frontmatter + system prompt)
+skills/<name>/SKILL.md       six skills, each with references/, scripts/ and evals/ as needed
 harness/minify/              the minify harness: hooks, CLI, output style, tests
 AGENTS.md                    instructions for coding agents working in this repo
 CLAUDE.md                    imports AGENTS.md for Claude Code

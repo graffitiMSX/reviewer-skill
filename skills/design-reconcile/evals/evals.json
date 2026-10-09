@@ -1,0 +1,32 @@
+{
+  "skill_name": "design-reconcile",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "Antes de montar o plano de ação do AssinAi, confere se as recomendações das cinco lentes da revisão de design não se contradizem. Não quero corrigir uma coisa e reabrir outra.",
+      "expected_output": "A conflict report over all five lens reports: each conflict names the findings, the concrete collision in the code, what happens when both fixes are applied, and a resolution; trade-offs are left to the user as decisions.",
+      "files": [],
+      "assertions": [
+        "Every conflict is numbered X-nnn and names at least two F-<LENS>-nnn findings that exist in the lens reports",
+        "Every conflict states where the two remediations collide, with a file path, setting or contract",
+        "Every conflict walks through what happens when both fixes are applied as written",
+        "Every conflict has a resolution of kind combined, prefer, sequence or decision",
+        "A prefer resolution says what the non-preferred finding gets instead",
+        "Product or risk trade-offs are left as decisions with options, not chosen by the reviewer",
+        "scripts/conflicts.py check exits zero: no unknown finding and no cycle in the fix order",
+        "Pairs that were checked and found compatible are listed",
+        "No lens report, plan or code file was modified"
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "do the security and ux recommendations from the review fight each other anywhere?",
+      "expected_output": "A conflict check limited to the security and UX lens reports, stating that only those two lenses were compared.",
+      "files": [],
+      "assertions": [
+        "Only the security and UX reports are compared, and the report says so",
+        "A result of no conflicts, if that is the case, is stated plainly with the checked pairs listed"
+      ]
+    }
+  ]
+}
