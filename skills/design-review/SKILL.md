@@ -13,7 +13,7 @@ Stage 1 of the remediation pipeline. Runs one or more lenses and produces `docs/
 | `backend` | `backend-reviewer` | idempotency, dual writes, concurrency, performance, resilience, queues, API contracts |
 | `frontend` | `frontend-reviewer` | client code: state and data flow, submits, error states, forms, routing, performance, accessibility implementation, build config |
 | `ux` | `ux-reviewer` | the experience: task flows and friction, navigation, feedback, error recovery, copy, consistency, onboarding and empty states, responsive behavior, trust |
-| `security` | `security-reviewer` | authn, authz, tenant isolation, input handling, webhooks, secrets, client security, data protection, supply chain, AI risks |
+| `security` | `security-reviewer` | authn, authz, tenant isolation, input handling, webhooks, secrets, client security, data protection, supply chain, AI risks, OWASP Top 10 coverage |
 
 ## Steps
 
@@ -49,7 +49,7 @@ Stage 1 of the remediation pipeline. Runs one or more lenses and produces `docs/
 ## Quality gate
 
 - Every High or Critical finding has concrete evidence and a step-by-step failure or attack scenario.
-- Backend lens: every dual-write candidate has a consistency analysis, every retriable mutation an idempotency assessment, every async flow a duplicate/order/poison/replay assessment. Security lens: every mutation and data read appears in the authorization matrix. UX lens: every critical flow was walked step by step, and screens it could not see are listed as Needs verification.
+- Backend lens: every dual-write candidate has a consistency analysis, every retriable mutation an idempotency assessment, every async flow a duplicate/order/poison/replay assessment. Security lens: every mutation and data read appears in the authorization matrix, and the OWASP Top 10 coverage table has all ten categories. UX lens: every critical flow was walked step by step, and screens it could not see are listed as Needs verification.
 - Confidence labels on every finding; coverage and blind spots stated per lens.
 - Handoffs between lenses were followed up, not dropped.
 - Scorecard: `scripts/scorecard.py` exits zero, so no grade exceeds its cap and every grade has a reason. Every numbered check of every lens that ran appears with a grade, `n/a` or `not assessed`. The merged report carries the script's output unchanged, and a run of fewer than five lenses is labelled partial.
