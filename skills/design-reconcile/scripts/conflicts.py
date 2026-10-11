@@ -18,6 +18,8 @@ conflict-reviewer agent does it. This script does the parts that are not:
                findings that exist in the reports, has a resolution of a known
                kind, and the Order lines of all conflicts together contain no
                cycle, so the plan never has to fix A before B and B before A.
+               An Order line is a chain of steps, each one or more findings:
+               `F-ARC-001, F-BE-008 → F-BE-010 → F-ARC-007`.
 
 `check` exits 1 when it finds a problem, so the skill's quality gate can rely
 on it.
@@ -65,6 +67,11 @@ def finding_blocks(text):
     marks = list(sc.FINDING.finditer(text))
     for i, m in enumerate(marks):
         end = marks[i + 1].start() if i + 1 < len(marks) else len(text)
+        # a finding ends at the next heading of its own level or above, so the
+        # last one does not swallow the tables and test plan that follow it
+        depth = len(m.group(0)) - len(m.group(0).lstrip("#"))
+        closing = re.compile(r"^#{1,%d}\s" % depth, re.M).search(text, m.end(), end)
+        end = closing.start() if closing else end
         title = text[m.end(): text.find("\n", m.end())].strip(" ]")
         blocks.setdefault(m.group(1).upper(), (m.group(2).capitalize(), title, text[m.end(): end]))
     return blocks
@@ -180,12 +187,14 @@ def check(args):
         steps = [s for s in (sc.FINDING_ID.findall(part.upper()) for part in ARROW.split(order)) if s]
         if chosen == "sequence" and len(steps) < 2:
             problems.append(f"{xid}: a `sequence` resolution needs an Order line such as `F-BE-003 → F-SEC-007`")
+        for fid in sorted({f for step in steps for f in step} - set(findings)):
+            problems.append(f"{xid}: the Order line names {fid}, which is not in the review reports")
         for before, after in zip(steps, steps[1:]):
             for a in before:
                 for b in after:
                     edges.setdefault((a, b), xid)
         for name in ("What each asks for", "If both are applied as written", "Resolved remediation", "Verification"):
-            if not field(block, name):
+            if not re.search(FIELD.format(name=name), block, re.I):
                 problems.append(f"{xid}: missing **{name}**")
     cycle = find_cycle(edges)
     if cycle:
