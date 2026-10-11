@@ -47,6 +47,10 @@ Stage 1 of the remediation pipeline. Runs one or more lenses and produces `docs/
 4. **Check the merged report** against the gate below; send gaps back to the lens agent rather than filling them yourself.
 5. **Present** the overall score with its gauge and label, the lens scores, the executive assessment, the three most important actions and the combined matrix. Say plainly when the score is partial because fewer than five lenses ran. Offer `/action-plan` as the next stage, and when two or more lenses ran, offer `/design-reconcile` first: the lenses work alone, so their fixes can contradict each other.
 
+## Human artifacts
+
+Follow "Human artifacts" in `references/conventions.md`; it is part of the stage, not an extra. Keep the run record in `docs/remediation/work/review/`: `run.md`, plus `prompts.md` (the prompt sent to each lens agent), `scorecard.md` (the scorecard script's output, including any problems it listed) and `gate.md`. When the gate passes, render the page with `page.py review docs/remediation`, tell the user where it is, and ask whether to publish it.
+
 ## Quality gate
 
 - Every High or Critical finding has concrete evidence and a step-by-step failure or attack scenario.
@@ -55,3 +59,4 @@ Stage 1 of the remediation pipeline. Runs one or more lenses and produces `docs/
 - Handoffs between lenses were followed up, not dropped.
 - Scorecard: `scripts/scorecard.py` exits zero, so no grade exceeds its cap and every grade has a reason. Every numbered check of every lens that ran appears with a grade, `n/a` or `not assessed`. The merged report carries the script's output unchanged, and a run of fewer than five lenses is labelled partial.
 - Strengths listed; no secrets reproduced.
+- The run record exists in `docs/remediation/work/review/` and `pages/review.html` was rendered from the final artifact.

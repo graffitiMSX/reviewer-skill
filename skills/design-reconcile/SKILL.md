@@ -14,7 +14,7 @@ It reads reports and code and writes one file. It never edits the lens reports, 
 1. **Locate the reports.** Default: the per-lens files `docs/remediation/design-review-<lens>.md`, or the merged `design-review.md` when they are gone. If there is no review, say so and offer `/design-review`. With a single lens there is nothing to cross-check between lenses; say so, and run only if the user wants the check inside that lens. If an `action-plan.md` already exists, mention it: a conflict found now means some of its actions need revisiting. If the code has changed a lot since the review, say that the reviewer will flag findings that are already fixed, and that `/design-rereview` is the way to refresh them.
 2. **List the shared ground.** Finding which fixes land on the same code is mechanical, so a script does it:
    ```bash
-   python3 <this skill's directory>/scripts/conflicts.py candidates docs/remediation > <scratch>/shared-paths.md
+   python3 <this skill's directory>/scripts/conflicts.py candidates docs/remediation > docs/remediation/work/conflicts/shared-paths.md
    ```
 3. **Delegate** to the `conflict-reviewer` agent (read-only). One agent, because it has to hold every report at once:
    ```
@@ -33,6 +33,10 @@ It reads reports and code and writes one file. It never edits the lens reports, 
    It exits non-zero when a conflict cites a finding that does not exist, lacks a resolution, or when the fix orders of all conflicts together form a cycle. Send those back to the agent; do not rewrite a resolution yourself.
 5. **Present** the conflict table, any conflict marked live first since it is a defect in the code today, then the decisions that need the user, each with its options. Those are theirs to make: do not choose for them, and do not plan around an undecided one. Offer `/action-plan` next, which picks up the conflicts file.
 
+## Human artifacts
+
+Follow "Human artifacts" in `../design-review/references/conventions.md`; it is part of the stage, not an extra. Keep the run record in `docs/remediation/work/conflicts/`: `run.md`, plus `shared-paths.md` (write the candidates list here instead of a scratch folder), `prompt.md` and `check.txt` (the check command's output). When the gate passes, render the page with `page.py conflicts docs/remediation`, tell the user where it is, and ask whether to publish it.
+
 ## Quality gate
 
 - `scripts/conflicts.py check` exits zero: every conflict names existing findings, has a resolution, and the fix orders contain no cycle.
@@ -40,3 +44,4 @@ It reads reports and code and writes one file. It never edits the lens reports, 
 - No finding is dropped by a resolution: a `prefer` says what the other finding gets instead.
 - Trade-offs the code cannot settle are `decision`, with options, and are shown to the user.
 - Identical fixes asked for by several findings are listed under plan once. Pairs that were checked and found compatible are listed, and a result of no conflicts is reported as such.
+- The run record exists in `docs/remediation/work/conflicts/` and `pages/conflicts.html` was rendered from the final artifact.

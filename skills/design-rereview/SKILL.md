@@ -52,9 +52,14 @@ It is cheaper than a full review because each lens starts from the earlier findi
 - **Same rubric, both sides.** Grade the current state with the design-review rubric and caps. When the baseline has no scorecard because it predates grading, reconstruct its grades from the baseline findings with the same rubric and label them reconstructed, so the comparison is like for like.
 - **A partial comparison says so.** Comparing two lenses is not comparing the application. The script labels a partial score.
 
+## Human artifacts
+
+Follow "Human artifacts" in `../design-review/references/conventions.md`; it is part of the stage, not an extra. Keep the run record in `docs/remediation/work/rereview/`: `run.md`, plus `scope.md` (the commit range, `git log --oneline` and `git diff --stat`), `prompts.md` and `comparison.md` (the comparison script's output). When the gate passes, render the page with `page.py rereview docs/remediation`, tell the user where it is, and ask whether to publish it.
+
 ## Quality gate
 
 - `scripts/compare.py` exits zero.
 - Every baseline finding in each lens has exactly one status with current evidence; every Fixed cites the code that proves it.
 - New findings and regressions are listed, or the lens says it looked and found none.
 - The merged report carries the script's comparison unchanged and states the baseline and current commits.
+- The run record exists in `docs/remediation/work/rereview/` and `pages/rereview.html` was rendered from the final artifact.

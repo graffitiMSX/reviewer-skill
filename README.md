@@ -28,6 +28,8 @@ flowchart LR
 | 4 | `/dispatch-fixes` | `fix-agent` × N (one per group, own worktree, three at a time by default) | open issues + plan | `dispatch.md`; groups `G-nn`, branches, PRs |
 | 5 | `/design-rereview [lenses]` | the same five reviewers (read-only, three at a time by default) | earlier review + current code | `design-rereview-<date>.md`; a status for every earlier finding, grades before and after |
 
+Every stage also leaves a run record in `docs/remediation/work/<stage>/` (what ran, on which commit, every intermediate output and each gate result) and a page for people in `docs/remediation/pages/<stage>.html`: the whole artifact with folding sections, cross-linked IDs and filterable tables, under a dashboard of scores, counts and graphs. `skills/design-review/scripts/page.py` renders it from the artifact, so no model writes it, and each skill offers to publish it as a private claude.ai Artifact.
+
 Stages 3 and 4 change external state (GitHub issues, merges, promotion to whatever branch the target repo promotes to) and always stop for explicit approval first.
 
 The skills that fan out agents (`/design-review`, `/design-rereview`, `/dispatch-fixes`) run at most three at a time. Say another number to change it, for example `/design-review max 5` or "one at a time".
