@@ -21,6 +21,7 @@ It is cheaper than a full review because each lens starts from the earlier findi
    Re-review the <lens> lens of the application at <path>, read-only.
    Baseline review: <path to the merged report or the lens file>, your lens's section. Baseline commit: <sha>. Current code: <branch> at <sha>.
    Changed since the baseline in your area: <paths, or "see git diff --stat <baseline>..<current>">.
+   Code map: <map folder and `<code-map skill's directory>/scripts/codemap.py` when a fresh map of the current code exists, or "none">.
    Read <this skill's directory>/references/rereview-format.md and <design-review skill's directory>/references/conventions.md first, and follow the format exactly.
    Write your report to <output path>. Reply with only the summary, the baseline grades, the current scorecard and the finding status table.
    ```

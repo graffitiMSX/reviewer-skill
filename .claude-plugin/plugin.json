@@ -1,5 +1,5 @@
 {
   "name": "remediation-pipeline",
-  "description": "Design review → conflict check → action plan → GitHub issues → dispatched fix agents → re-review. Six skills and nine agents for taking an application from audit to verified fixes, with a 0–10 scorecard before and after.",
+  "description": "Code map → design review → conflict check → action plan → GitHub issues → dispatched fix agents → re-review. Seven skills and nine agents for taking an application from audit to verified fixes, with a 0–10 scorecard before and after.",
   "version": "0.1.0"
 }

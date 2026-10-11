@@ -1,0 +1,43 @@
+{
+  "skill_name": "code-map",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "Antes de rodar a revisão de design do AssinAi, mapeia o código como grafo para os revisores usarem.",
+      "expected_output": "A code map in docs/remediation/code-map with the five views and graph.json, built by the script, plus a summary that names the engine and commit, compares route and table counts with the repo and says what the map could not see.",
+      "files": [],
+      "assertions": [
+        "scripts/codemap.py build ran and exited zero, and `codemap.py status` reports fresh",
+        "The output folder holds code-map.md, modules.md, entry-points.md, data.md, frontend.md and graph.json",
+        "The summary names the engine that ran and the commit that was mapped",
+        "The route count in the map was compared with a count taken from the repo, and any gap is stated",
+        "The table count was compared with the migrations or schema, and any gap is stated",
+        "At least two rows of entry-points.md were checked against the code",
+        "Cycles, shared tables, unguarded routes and client/server mismatches are presented as leads, not as findings",
+        "No generated file was edited by hand, and nothing outside the output folder changed in the target repo"
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "which routes end up touching the refresh_tokens table, and what breaks if I change documentService.ts?",
+      "expected_output": "Answers taken from the map with the table and impact queries, each confirmed against the code, building or refreshing the map first if it is missing or stale.",
+      "files": [],
+      "assertions": [
+        "The map's status was checked before it was used, and it was built or rebuilt if missing or stale",
+        "The answer uses `codemap.py table` and `codemap.py impact` rather than a fresh grep of the whole repo",
+        "Claims taken from the map were confirmed by opening the cited code",
+        "Routes whose tables are marked ≈ are reported as possible, not certain"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "map this repo, cgr isn't installed on this machine",
+      "expected_output": "A map built with the builtin engine, with a summary that says there are no symbols or call edges and what that costs.",
+      "files": [],
+      "assertions": [
+        "The build ran with the builtin engine and did not fail for lack of cgr",
+        "The summary states that the map has no symbols or call edges and that route tables are coarse"
+      ]
+    }
+  ]
+}
