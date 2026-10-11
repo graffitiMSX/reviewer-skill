@@ -15,6 +15,7 @@ Stage 2 of the remediation pipeline. Reads `docs/remediation/design-review.md` (
    Repository: <repo root>
    Review report: <path>
    Conflict report: <path, or "none">
+   Code map: <map folder and `<code-map skill's directory>/scripts/codemap.py`, or "none">
    Constraints from the user: <list, or "none given">
    Normalize the findings, validate the High and Critical ones against the code, then write the complete action plan to <output path>. Reply with only the executive action summary, the containment plan and the action prioritization table.
    ```

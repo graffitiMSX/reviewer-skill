@@ -20,6 +20,7 @@ It reads reports and code and writes one file. It never edits the lens reports, 
    ```
    Cross-check the design review of the application at <repo root>.
    Lens reports: <paths>. Shared-paths list: <path>.
+   Code map: <map folder and `<code-map skill's directory>/scripts/codemap.py`, or "none">. `impact <file>` shows what else a fix to that file reaches.
    Context from the user: <constraints or priorities they stated, or "none">.
    Conventions: read <design-review skill's directory>/references/conventions.md first.
    Write your complete report to <output path>. Reply with only the summary, the conflict table and the decisions for the team.

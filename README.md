@@ -1,10 +1,12 @@
 # Remediation pipeline
 
-Claude Code skills and subagents that take an application from design review to verified fixes in five stages, with an optional conflict check after the first. Each stage writes an artifact into `docs/remediation/` in the target repo, and the next stage reads it, so findings stay traceable all the way to a merged pull request.
+Claude Code skills and subagents that take an application from design review to verified fixes in five stages, with an optional code map before the first and an optional conflict check after it. Each stage writes an artifact into `docs/remediation/` in the target repo, and the next stage reads it, so findings stay traceable all the way to a merged pull request.
 
 ```mermaid
 flowchart LR
     repo[(Target repo)] --> s1
+    repo -.-> m["0 · /code-map<br/>the code as a graph"]
+    m -.->|code-map/| s1
     s1["1 · /design-review<br/>five lenses, graded 0–10"] -->|design-review.md| s2
     s1 -.->|lens reports| r["/design-reconcile<br/>contradicting fixes"]
     r -.->|design-review-conflicts.md| s2
@@ -18,6 +20,7 @@ flowchart LR
 
 | Stage | Skill | Agents | Reads | Writes |
 |---|---|---|---|---|
+| 0 | `/code-map` (optional) | none; one script | repo | `code-map/`: `graph.json` plus views of modules, entry points, data and front end |
 | 1 | `/design-review [lenses]` | `architecture-reviewer`, `backend-reviewer`, `frontend-reviewer`, `ux-reviewer`, `security-reviewer` (read-only, run in parallel, three at a time by default) | repo | `design-review.md`, merged from one file per lens; findings `F-ARC/BE/FE/UX/SEC-nnn` |
 | 1b | `/design-reconcile` (optional) | `conflict-reviewer` (read-only) | lens reports + repo | `design-review-conflicts.md`; conflicts `X-nnn`, each with a resolution or a decision for the team |
 | 2 | `/action-plan` | `remediation-planner` (read-only) | review, conflicts if present, repo | `action-plan.md`; actions `A-nnn` |
@@ -30,6 +33,21 @@ Stages 3 and 4 change external state (GitHub issues, merges, promotion to whatev
 The skills that fan out agents (`/design-review`, `/design-rereview`, `/dispatch-fixes`) run at most three at a time. Say another number to change it, for example `/design-review max 5` or "one at a time".
 
 The repo also carries the [minify harness](harness/minify/README.md), which is separate from the pipeline.
+
+## Stage 0: code map
+
+Every reviewer starts by working out the same things: where the entry points are, what guards them, what they reach, who owns each table. `/code-map` does that once, mechanically, and writes `docs/remediation/code-map/` in the target repo. The later stages read it when it is there and work as before when it is not.
+
+| View | Holds |
+|---|---|
+| `modules.md` | most depended-on files, import cycles, folders that depend on each other both ways |
+| `entry-points.md` | every route with its middleware in running order, handler and tables reached; jobs, queues and schedules |
+| `data.md` | readers and writers of each table; tables written from more than one folder |
+| `frontend.md` | client routes, API calls, and client calls and server routes that do not match up |
+
+`skills/code-map/scripts/codemap.py build <repo>` produces the map. It uses code-graph-rag (`cgr`) when installed, which adds functions and call edges, and otherwise a builtin engine with no dependencies that covers TypeScript, JavaScript and Python at file level. The same script answers questions about the graph: `impact <file>`, `route <text>`, `table <name>`, `deps`, `rdeps`, `callers`, `callees`; and `status <repo>` says whether the map still matches the code.
+
+The map is extracted by pattern, so it gives a file and line to open, not a proven fact. Reviewers cite the code, never the map.
 
 ## Stage 1: design review
 
@@ -72,7 +90,7 @@ Each lens works alone, so two lenses can prescribe fixes that cannot both hold: 
 ```
 .claude-plugin/plugin.json   plugin manifest
 agents/                      nine subagent definitions (frontmatter + system prompt)
-skills/<name>/SKILL.md       six skills, each with references/, scripts/ and evals/ as needed
+skills/<name>/SKILL.md       seven skills, each with references/, scripts/ and evals/ as needed
 harness/minify/              the minify harness: hooks, CLI, output style, tests
 AGENTS.md                    instructions for coding agents working in this repo
 CLAUDE.md                    imports AGENTS.md for Claude Code

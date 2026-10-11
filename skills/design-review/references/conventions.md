@@ -11,6 +11,15 @@ Every reviewer agent embeds a compact copy of these rules; this file is the refe
 - No generic advice: name the signal, location, threshold, owner and response.
 - Report what is designed well, not only defects.
 
+## Code map
+When the skill passes a code map (`docs/remediation/code-map/`, built by `/code-map`), use it to find your way, then read the code.
+- Read `code-map.md` and the view for your lens first: `modules.md` for architecture, `entry-points.md` and `data.md` for backend and security, `frontend.md` for front-end and UX. They replace the first pass of working out where the entry points are, what guards them and what they reach.
+- Ask the graph instead of grepping for structure: `codemap.py route`, `table`, `impact`, `deps`, `rdeps`, `callers`, `callees`. The index lists them.
+- The map points at evidence; it is not evidence. Open the file and line before citing anything, and cite the code, not the map. A route listed with no middleware is a question to check, not a finding.
+- An absence proves nothing. The map misses routes registered in loops, SQL built from fragments and calls made through dependency injection; `code-map.md` lists its limits. Cover what it cannot see the way you would without it.
+- Check the commit in `code-map.md` against the code under review, and trust the map less for files that changed since.
+- With no map, work as before.
+
 ## Finding IDs
 `F-<LENS>-nnn` with LENS = ARC | BE | FE | UX | SEC, numbered in severity order within the lens. One issue per finding; a shared root cause is its own finding that links the others. When a finding belongs to another lens, note it in "Open questions / handoffs" instead of reporting it half-analyzed.
 

@@ -17,11 +17,12 @@ Stage 1 of the remediation pipeline. Runs one or more lenses and produces `docs/
 
 ## Steps
 
-1. **Pick lenses and target.** Use the lenses the user named; default to all five, but drop `frontend` and `ux` when the repo has no client code and say so. Confirm repo root, focus area and output path (default above; create the folder). Note anything the user already knows (incidents, hot spots, missing telemetry) to pass on verbatim.
+1. **Pick lenses and target.** Use the lenses the user named; default to all five, but drop `frontend` and `ux` when the repo has no client code and say so. Confirm repo root, focus area and output path (default above; create the folder). Note anything the user already knows (incidents, hot spots, missing telemetry) to pass on verbatim. Check for a code map with `python3 ../code-map/scripts/codemap.py status <repo root>` (path relative to this skill). When it is missing or stale, offer to run `/code-map` first: it takes seconds to minutes and saves every lens the same discovery work. Carry on without one if the user prefers.
 2. **Run the lenses in parallel, three at a time.** At most three agents run at the same time, or the number the user gave ("max 5", "one at a time"). Each agent costs tokens and machine load at once, so the default stays modest. With more lenses than the limit, start the first batch in one turn and start the next lens as each one finishes. One Agent call per lens, each writing its own file `docs/remediation/design-review-<lens>.md`:
    ```
    Review the application at <repo root>. Focus: <area, or "whole system">.
    Context from the user: <notes or "none">.
+   Code map: <map folder and `<code-map skill's directory>/scripts/codemap.py`, or "none">.
    Conventions: read <this skill's directory>/references/conventions.md first.
    Write your complete lens report to <lens output path>. Reply with only the executive assessment, the scorecard and the prioritization matrix.
    ```
