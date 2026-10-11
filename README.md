@@ -55,7 +55,7 @@ The map is extracted by pattern, so it gives a file and line to open, not a prov
 
 | Lens | Covers |
 |---|---|
-| `architecture` | boundaries, coupling, data ownership, state machines, scalability shape, deployment safety, operability, test strategy |
+| `architecture` | boundaries, coupling, data ownership, CAP analysis of each data store, state machines, scalability shape, deployment safety, operability, test strategy |
 | `backend` | idempotency, dual writes, concurrency, performance, resilience, queues, API contracts |
 | `frontend` | client code: state and data flow, submits, error states, forms, routing, performance, accessibility implementation, build config |
 | `ux` | the experience: task flows and friction, navigation, feedback, error recovery, copy, consistency, onboarding, responsive behavior, trust |
