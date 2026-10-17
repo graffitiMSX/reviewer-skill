@@ -25,7 +25,7 @@ The whole map is computed by `scripts/codemap.py`. There is no judgement in it, 
    ```bash
    python3 <this skill's directory>/scripts/codemap.py status <repo>
    ```
-   `fresh` means there is nothing to do unless the user wants a rebuild. `stale` and `missing` mean build.
+   `fresh` means no source file was added, removed or changed since the build, committed or not, so there is nothing to do unless the user wants a rebuild. `stale` lists what changed. `missing` and `stale` mean build.
 3. **Build.**
    ```bash
    python3 <this skill's directory>/scripts/codemap.py build <repo>
@@ -46,7 +46,7 @@ Whether to commit the folder is the team's call. The markdown views are small an
 
 ## How the other skills use it
 
-They read the map when it is there and work as before when it is not. The rule they follow is in `../design-review/references/conventions.md` under "Code map": read the view for your lens first, query instead of grepping for structure, and open the code before citing anything, because the map points at evidence and is not evidence. A stale map is still useful for the files that did not change; `status` says how many did.
+Each stage that reads code runs `codemap.py ensure <repo>` first, which rebuilds only when a source file changed and keeps the engine the map was built with, so the map follows the code through the fixes without anyone rebuilding it by hand. The fix agents map their own worktrees outside the repo. Every stage reads the map when it is there and work as before when it is not. The rule they follow is in `../design-review/references/conventions.md` under "Code map": read the view for your lens first, query instead of grepping for structure, and open the code before citing anything, because the map points at evidence and is not evidence.
 
 Query commands, all taking the map folder:
 

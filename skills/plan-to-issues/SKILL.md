@@ -18,7 +18,7 @@ Stage 3 of the remediation pipeline. Reads `docs/remediation/action-plan.md`, wr
    ls .github/ISSUE_TEMPLATE 2>/dev/null
    grep -rlis "ISSUE_TEMPLATE\|issue template\|labels" docs CONTRIBUTING.md 2>/dev/null
    ```
-   Make sure the active gh account is the one this repo expects (the project's CLAUDE.md usually says).
+   Make sure the active gh account is the one this repo expects (the project's CLAUDE.md usually says). When a code map exists, refresh it with `codemap.py ensure <repo root>` ("Keeping it current" in the conventions): code may have moved since the plan was written.
 
    Read the repo's issue conventions before drafting, because the tickets must follow them:
    - Every issue template: frontmatter `name`, `about`, `title` and `labels`, plus its headings. Issue forms (`*.yml`) give the same through `name`, `title`, `labels` and their fields.
@@ -29,6 +29,7 @@ Stage 3 of the remediation pipeline. Reads `docs/remediation/action-plan.md`, wr
    Action plan: <path>    Review report: <path>    Repository: <owner/repo>
    Existing labels: <list>    Milestones: <list or none>
    Issue templates: <paths, or none>    Convention docs: <paths, or none>
+   Code map: <map folder and `<code-map skill's directory>/scripts/codemap.py`, or none>. Use `impact <file>` to list the routes and files each ticket reaches in its scope, and check that cited lines still say what the plan says.
    Follow the repo's templates for type, labels, title pattern and headings.
    Fallback body template, only if the repo has no templates: <this skill's directory>/references/issue-template.md
    Write the tickets file to <repo>/docs/remediation/tickets.md in your required format. Reply with the summary table, proposed new labels and any ambiguities.
