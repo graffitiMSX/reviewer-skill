@@ -13,6 +13,7 @@
         "Every High or Critical finding has a step-by-step failure, attack or user scenario",
         "Report contains a prioritization matrix table with Rank, Finding, Severity, Confidence, Effort columns",
         "Backend coverage includes a consistency/idempotency matrix that mentions the Stripe webhook and the signing flow",
+        "Architecture coverage includes a CAP table with one row per data store, cache and queue, stating its topology, its behaviour under partition or failover and what the code assumes",
         "Security coverage includes an authorization matrix table over endpoints or jobs",
         "Security coverage includes an OWASP Top 10 coverage table with all ten 2025 categories, and each security finding names its OWASP category or none",
         "Coverage and blind spots are stated explicitly",
