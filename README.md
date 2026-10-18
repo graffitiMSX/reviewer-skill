@@ -83,6 +83,17 @@ Each lens works alone, so two lenses can prescribe fixes that cannot both hold: 
 
 `skills/design-rereview/scripts/compare.py` computes that comparison and refuses to pass while any earlier finding lacks a status. When the first review predates grading, the baseline grades are reconstructed from its findings with the same rubric and labelled as such. The report goes to `docs/remediation/design-rereview-<date>.md` and never overwrites the baseline.
 
+## Memory
+
+`/remember` saves and recalls durable memory through the best system on the machine: ai-memory when it is installed and its server answers, else the claude-mem plugin, else Claude Code's MEMORY.md files. `skills/remember/scripts/memory_backend.py` makes the choice, and as a SessionStart hook it tells every session which tier is active and warns when ai-memory and claude-mem both capture sessions. claude-mem has no write tool, so under it deliberate memories go to MEMORY.md. Rules the team follows stay in `AGENTS.md`, `CLAUDE.md` or decision records; memory holds history, preferences and decisions tagged so other projects can find them. The conflict check and the action plan offer to save the decisions a person approved.
+
+Install the hook in `~/.claude/settings.json` under `hooks.SessionStart`:
+
+```json
+{"matcher": "*", "hooks": [{"type": "command", "timeout": 10,
+  "command": "f=~/.claude/skills/remember/scripts/memory_backend.py; [ -f $f ] && python3 $f hook || true"}]}
+```
+
 ## Minify harness
 
 `harness/minify/` makes Claude Code emit code minified, formats it back with the project's own formatter at the end of the turn, and reports what the minified emission saved. It installs as an output style plus three hooks and has nothing to do with the remediation pipeline. See `harness/minify/README.md` for installing, arming and uninstalling it.
@@ -92,7 +103,7 @@ Each lens works alone, so two lenses can prescribe fixes that cannot both hold: 
 ```
 .claude-plugin/plugin.json   plugin manifest
 agents/                      nine subagent definitions (frontmatter + system prompt)
-skills/<name>/SKILL.md       seven skills, each with references/, scripts/ and evals/ as needed
+skills/<name>/SKILL.md       eight skills, each with references/, scripts/ and evals/ as needed
 harness/minify/              the minify harness: hooks, CLI, output style, tests
 AGENTS.md                    instructions for coding agents working in this repo
 CLAUDE.md                    imports AGENTS.md for Claude Code
