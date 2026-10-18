@@ -73,3 +73,7 @@ Never merge or close on an agent's word alone. Data migrations, security, paymen
 Grouping summary · one brief per group · dispatch order and dependencies · status table · verification and closure checklist · blockers and decisions that need the user.
 
 When a wave of fixes is promoted and verified, suggest `/design-rereview` for the lenses those fixes touched. It checks each finding against the promoted code and shows how the grades moved, which a list of closed issues cannot.
+
+## Human artifacts
+
+Follow "Human artifacts" in `../design-review/references/conventions.md`; it is part of the stage, not an extra. Keep the run record in `docs/remediation/work/dispatch/`: `run.md`, plus `briefs/G-nn.md` (the brief sent to each fix agent), `validation/G-nn.txt` (the check output for each pull request) and each approval the user gave, with what it covered. When the stage's file is final, and again after it changes, render the page with `page.py dispatch docs/remediation`, tell the user where it is, and ask whether to publish it.

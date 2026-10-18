@@ -53,3 +53,7 @@ Stage 3 of the remediation pipeline. Reads `docs/remediation/action-plan.md`, wr
      python3 <this skill's directory>/scripts/create_issues.py <old tickets.md> --delete-created --repo <owner/repo> [--yes]
      ```
 6. **Report** the created issues table (ticket → `#number` → title) and offer `/dispatch-fixes` as the next stage.
+
+## Human artifacts
+
+Follow "Human artifacts" in `../design-review/references/conventions.md`; it is part of the stage, not an extra. Keep the run record in `docs/remediation/work/tickets/`: `run.md`, plus `dry-run.txt` (the creation script's output without `--create`), `created.txt` (its output when it created the issues) and the confirmation the user gave. When the stage's file is final, and again after it changes, render the page with `page.py tickets docs/remediation`, tell the user where it is, and ask whether to publish it.

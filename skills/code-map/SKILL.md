@@ -67,9 +67,14 @@ Say these when presenting, so nobody reads an absence as proof:
 - Call edges between files that do not import each other are dropped, which removes name collisions and, with them, calls made through an interface.
 - Route scanning knows Express-style routers, NestJS decorators, and Flask and FastAPI decorators. Table scanning knows SQL text, knex-style builders, Prisma calls and the common schema declarations.
 
+## Human artifacts
+
+Follow "Human artifacts" in `../design-review/references/conventions.md`; it is part of the stage, not an extra. Keep the run record in `docs/remediation/work/code-map/`: `run.md`, plus `build.txt` (the build command's output) and `verification.md` (the route and table counts you compared, and the rows you checked against the code). When the gate passes, render the page with `page.py code-map docs/remediation`, tell the user where it is, and ask whether to publish it.
+
 ## Quality gate
 
 - `codemap.py build` exited zero and `codemap.py status <repo>` says `fresh`.
 - The route and table counts were compared with the repo, and any gap is stated.
 - The summary names the engine, the commit, and what the map could not see in this repo.
 - Nothing in the output folder was edited by hand.
+- The run record exists in `docs/remediation/work/code-map/` and `pages/code-map.html` was rendered from the final artifact.

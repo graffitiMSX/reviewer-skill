@@ -23,6 +23,10 @@ Stage 2 of the remediation pipeline. Reads `docs/remediation/design-review.md` (
 3. **Check the plan** against the gate below; send gaps back to the agent.
 4. **Present** the summary, the first-week actions and the decision log (what stakeholders must decide before some actions can start). Offer `/plan-to-issues` as the next stage.
 
+## Human artifacts
+
+Follow "Human artifacts" in `../design-review/references/conventions.md`; it is part of the stage, not an extra. Keep the run record in `docs/remediation/work/plan/`: `run.md`, plus `prompt.md` (the prompt sent to the planner, with the user's constraints verbatim) and `gate.md`. When the gate passes, render the page with `page.py plan docs/remediation`, tell the user where it is, and ask whether to publish it.
+
 ## Quality gate
 
 - Every Critical or High finding is assigned to an action, explicitly accepted, or blocked by a documented decision.
@@ -31,3 +35,4 @@ Stage 2 of the remediation pipeline. Reads `docs/remediation/design-review.md` (
 - Unknowns became time-boxed discovery tasks; no invented incidents, volumes, owners or deadlines.
 - When a conflict report exists, every `X-nnn` is reflected: its resolved remediation is what the plan builds, its order is respected, and each `decision` is in the decision log blocking the actions that depend on it.
 - The traceability table maps every `F-<LENS>-nnn` to `A-nnn` IDs.
+- The run record exists in `docs/remediation/work/plan/` and `pages/plan.html` was rendered from the final artifact.
