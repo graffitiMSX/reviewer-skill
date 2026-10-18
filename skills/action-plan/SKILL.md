@@ -21,7 +21,7 @@ Stage 2 of the remediation pipeline. Reads `docs/remediation/design-review.md` (
    ```
    If the Agent tool is unavailable, read `../../agents/remediation-planner.md` (relative to this skill) and follow it yourself.
 3. **Check the plan** against the gate below; send gaps back to the agent.
-4. **Present** the summary, the first-week actions and the decision log (what stakeholders must decide before some actions can start). Offer `/plan-to-issues` as the next stage, and `/remember` for each decision the stakeholders settle.
+4. **Present** the summary, the first-week actions and the decision log (what stakeholders must decide before some actions can start). Offer `/plan-to-issues` as the next stage, and `/design-memory` for each decision the stakeholders settle.
 
 ## Human artifacts
 

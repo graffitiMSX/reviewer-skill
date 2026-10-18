@@ -1,9 +1,9 @@
 ---
-name: remember
+name: design-memory
 description: Save or recall durable memory through the best memory system on this machine — ai-memory when it runs, else the claude-mem plugin, else Claude Code's MEMORY.md files. Use whenever the user says "remember", "note that", "save this decision", "what did we decide about", "what do we know about", asks to record an architectural or team decision so later sessions or other projects can find it, or when a pipeline stage ends with decisions a person approved (design-reconcile decisions, the action plan's decision log).
 ---
 
-# Remember
+# Design Memory
 
 One place for each memory, picked by tier so recall never has to search three systems that disagree. A script picks the tier; the SessionStart hook runs the same script, so the session usually already knows it.
 
