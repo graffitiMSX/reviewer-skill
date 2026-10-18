@@ -31,7 +31,7 @@ It reads reports and code and writes one file. It never edits the lens reports, 
    python3 <this skill's directory>/scripts/conflicts.py check docs/remediation/design-review-conflicts.md docs/remediation
    ```
    It exits non-zero when a conflict cites a finding that does not exist, lacks a resolution, or when the fix orders of all conflicts together form a cycle. Send those back to the agent; do not rewrite a resolution yourself.
-5. **Present** the conflict table, any conflict marked live first since it is a defect in the code today, then the decisions that need the user, each with its options. Those are theirs to make: do not choose for them, and do not plan around an undecided one. Offer `/action-plan` next, which picks up the conflicts file. Once the user settles a decision, offer `/remember` to save it, so later reviews here and in other projects find it.
+5. **Present** the conflict table, any conflict marked live first since it is a defect in the code today, then the decisions that need the user, each with its options. Those are theirs to make: do not choose for them, and do not plan around an undecided one. Offer `/action-plan` next, which picks up the conflicts file. Once the user settles a decision, offer `/design-memory` to save it, so later reviews here and in other projects find it.
 
 ## Human artifacts
 
