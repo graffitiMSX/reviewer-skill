@@ -55,6 +55,7 @@ Implement the grouped fixes so that <risk> is removed or reduced without changin
 
 ## Branch and delivery
 - Repository: <absolute path>
+- Code map script: <path to `codemap.py`, or none>
 - Branch: `<prefix>/<lead-issue-number>-<short-description>`, e.g. `bugfix/351-jwt-type-confusion`
 - Base branch: <working branch, e.g. `claude`>
 - Commit messages: <repo format, e.g. `[BUG-351] fix: <description>`>

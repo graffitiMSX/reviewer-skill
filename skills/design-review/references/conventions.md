@@ -23,12 +23,18 @@ python3 <design-review skill's directory>/scripts/page.py <stage> docs/remediati
 with `<stage>` one of `code-map`, `review`, `conflicts`, `plan`, `tickets`, `dispatch`, `rereview`. It writes `docs/remediation/pages/<stage>.html`, a complete page to open in a browser: the whole document with folding sections, cross-linked IDs and filterable tables, under a dashboard computed from the same text. Never edit the page by hand; change the artifact and render again.
 
 **Published page.** The same run writes `docs/remediation/pages/artifact/<stage>.html`, the form a claude.ai Artifact is published from. When the Artifact tool is available, ask once whether to publish it: the link is private by default, but these documents describe weaknesses in a real system, so sharing them is the user's call. On yes, publish that file with the title the script printed, and write the link into `run.md`; publishing the same file again updates the same link. Without the tool, or on no, say where the local page is and stop there.
+**Keeping it current.** Every stage that reads code refreshes the map before using it or handing it to an agent:
+```bash
+python3 <code-map skill's directory>/scripts/codemap.py ensure <repo root>
+```
+It compares a hash of every source file with the one taken at build time and rebuilds only when a source file was added, removed or changed, committed or not; pipeline documents do not count. It writes nothing but the map folder, so it needs no approval. It keeps the engine the map was built with: seconds with builtin, a few minutes with cgr on a large repo, so say so before a cgr rebuild. Paste its output into the stage's `run.md`. When there is no map at all, `ensure` builds one; a stage that was not asked to map the code offers `/code-map` instead and carries on without one if the user prefers. A stage that maps code other than the checkout, such as a worktree, passes `-o <folder outside that worktree>` so the map is never committed with a fix.
+
 When the skill passes a code map (`docs/remediation/code-map/`, built by `/code-map`), use it to find your way, then read the code.
 - Read `code-map.md` and the view for your lens first: `modules.md` for architecture, `entry-points.md` and `data.md` for backend and security, `frontend.md` for front-end and UX. They replace the first pass of working out where the entry points are, what guards them and what they reach.
 - Ask the graph instead of grepping for structure: `codemap.py route`, `table`, `impact`, `deps`, `rdeps`, `callers`, `callees`. The index lists them.
 - The map points at evidence; it is not evidence. Open the file and line before citing anything, and cite the code, not the map. A route listed with no middleware is a question to check, not a finding.
 - An absence proves nothing. The map misses routes registered in loops, SQL built from fragments and calls made through dependency injection; `code-map.md` lists its limits. Cover what it cannot see the way you would without it.
-- Check the commit in `code-map.md` against the code under review, and trust the map less for files that changed since.
+- The skill refreshed the map just before handing it to you. If you notice code the map does not match, trust the code and mention the mismatch under coverage.
 - With no map, work as before.
 
 ## Finding IDs

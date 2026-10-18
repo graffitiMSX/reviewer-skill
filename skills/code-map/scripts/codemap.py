@@ -4,6 +4,7 @@
 Usage:
   codemap.py build <repo> [-o <out dir>] [--engine auto|cgr|builtin]
   codemap.py status <repo> [<map dir>]
+  codemap.py ensure <repo> [-o <out dir>] [--engine auto|cgr|builtin]   (rebuild only if stale)
   codemap.py <query> <map dir> <argument> [--depth N]
 
 Queries:
@@ -25,10 +26,13 @@ Two engines produce the same graph.json:
            TypeScript, JavaScript and Python, at file level, without calls.
 
 Everything here is extracted by pattern, so the map is a set of leads with
-file and line, not proof. `status` exits 1 when the map is missing or was
-built from another commit.
+file and line, not proof. `status` compares a hash of every source file with
+the one taken at build time and exits 1 when the map is missing or any source
+file was added, removed or changed, committed or not; pipeline documents and
+other non-source files do not count. `ensure` runs `build` only in that case.
 """
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -120,6 +124,17 @@ class Sources:
             except OSError:
                 self.cache[path] = ""
         return self.cache[path]
+
+
+def fingerprint(repo, files):
+    """Short content hash per source file, so freshness ignores commits and docs."""
+    out = {}
+    for path in files:
+        try:
+            out[path] = hashlib.sha1((Path(repo) / path).read_bytes()).hexdigest()[:12]
+        except OSError:
+            pass
+    return out
 
 
 def line_of(text, pos):
@@ -677,7 +692,8 @@ def build_graph(repo, engine):
     head = (run(["git", "rev-parse", "HEAD"], cwd=repo) or "").strip()
     dirty = bool((run(["git", "status", "--porcelain", "--untracked-files=no"], cwd=repo) or "").strip())
     return {
-        "meta": {"repo": repo.name, "engine": used, "note": note, "commit": head, "dirty": dirty, "built": date.today().isoformat()},
+        "meta": {"repo": repo.name, "engine": used, "note": note, "commit": head, "dirty": dirty, "built": date.today().isoformat(),
+                 "sources": fingerprint(repo, files)},
         "modules": module_list,
         "imports": sorted([index[a], index[b]] for a, targets in imports.items() for b in targets),
         "externals": {pkg: sorted(index[m] for m in mods) for pkg, mods in sorted(externals.items())},
@@ -1001,22 +1017,47 @@ def load(map_dir):
     return Map(json.loads(path.read_text(encoding="utf-8")))
 
 
-def cmd_status(args):
-    repo = Path(args.repo).resolve()
-    path = (Path(args.map) if args.map else repo / "docs" / "remediation" / "code-map") / "graph.json"
+def map_state(repo, map_dir=None):
+    """('missing' | 'fresh' | 'stale', message) for the map of a repo."""
+    path = (Path(map_dir) if map_dir else repo / "docs" / "remediation" / "code-map") / "graph.json"
     if not path.exists():
-        print(f"missing: no code map at {path.parent}")
-        sys.exit(1)
+        return "missing", f"missing: no code map at {path.parent}"
     meta = json.loads(path.read_text(encoding="utf-8"))["meta"]
+    built = f"built {meta['built']} from {meta['commit'][:12] or 'an unknown commit'} with the {meta['engine']} engine"
+    if "sources" in meta:
+        now = fingerprint(repo, list_files(repo))
+        then = meta["sources"]
+        changed = sorted(f for f in now.keys() | then.keys() if now.get(f) != then.get(f))
+        if not changed:
+            return "fresh", f"fresh: {built}; no source file changed since"
+        shown = ", ".join(changed[:5]) + (f" and {len(changed) - 5} more" if len(changed) > 5 else "")
+        return "stale", f"stale: {built}; {len(changed)} source files added, removed or changed since: {shown}"
+    # maps built before fingerprints: fall back to the commit
     head = (run(["git", "rev-parse", "HEAD"], cwd=repo) or "").strip()
     if meta["commit"] and head == meta["commit"] and not meta["dirty"]:
-        print(f"fresh: built {meta['built']} from {head[:12]} with the {meta['engine']} engine")
+        return "fresh", f"fresh: {built}"
+    return "stale", f"stale: {built}{' with uncommitted changes' if meta['dirty'] else ''}; the code is now at {head[:12] or 'unknown'}"
+
+
+def cmd_status(args):
+    state, message = map_state(Path(args.repo).resolve(), args.map)
+    print(message)
+    if state != "fresh":
+        sys.exit(1)
+
+
+def cmd_ensure(args):
+    repo = Path(args.repo).resolve()
+    state, message = map_state(repo, args.out)
+    print(message)
+    if state == "fresh":
         return
-    changed = (run(["git", "diff", "--name-only", meta["commit"], "HEAD"], cwd=repo) or "").splitlines() if meta["commit"] else []
-    code = [c for c in changed if c.endswith(SCAN_EXT)]
-    print(f"stale: built {meta['built']} from {meta['commit'][:12] or 'an unknown commit'}{' with uncommitted changes' if meta['dirty'] else ''}; "
-          f"the code is now at {head[:12] or 'unknown'}, {len(code)} source files changed since")
-    sys.exit(1)
+    if not args.engine:
+        # keep the engine the map was built with, so a rebuild costs what the first build did
+        previous = (Path(args.out) if args.out else repo / "docs" / "remediation" / "code-map") / "graph.json"
+        args.engine = json.loads(previous.read_text(encoding="utf-8"))["meta"]["engine"] if previous.exists() else "auto"
+    print(f"rebuilding with engine {args.engine}")
+    cmd_build(args)
 
 
 def show_modules(m, title, found, limit=80):
@@ -1103,13 +1144,17 @@ def main():
     status = sub.add_parser("status")
     status.add_argument("repo")
     status.add_argument("map", nargs="?")
+    ensure = sub.add_parser("ensure")
+    ensure.add_argument("repo")
+    ensure.add_argument("-o", "--out")
+    ensure.add_argument("--engine", choices=["auto", "cgr", "builtin"], help="default: the engine of the existing map, else auto")
     for name in ("deps", "rdeps", "impact", "route", "table", "symbol", "callers", "callees"):
         query = sub.add_parser(name)
         query.add_argument("map")
         query.add_argument("argument")
         query.add_argument("--depth", type=int)
     args = parser.parse_args()
-    {"build": cmd_build, "status": cmd_status}.get(args.command, cmd_query)(args)
+    {"build": cmd_build, "status": cmd_status, "ensure": cmd_ensure}.get(args.command, cmd_query)(args)
 
 
 if __name__ == "__main__":

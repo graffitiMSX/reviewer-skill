@@ -35,6 +35,8 @@ If the repo defines none of these, use the fallback: branch `agent/g-nn-<short-d
 
 Do not invent scope, owners or acceptance criteria; take them from the issues and the plan.
 
+When a code map exists, refresh it with `codemap.py ensure <repo root>` ("Keeping it current" in the conventions) and use `impact` on the files each issue cites: two issues whose changes reach the same files belong in one group or in sequence, never in parallel.
+
 ## 2. Group
 
 Put issues together only when they share an implementation boundary (same service, module, table, queue, root cause or enabling capability) **and** have compatible deploy and rollback needs, low merge-conflict risk and one coherent test strategy. Keep apart issues that need different expertise, have conflicting migrations, need separate risk gates, or depend on unfinished work. One group = one focused agent = one reviewable PR; split oversized groups into sequential batches. Tracking issues (Epic, Feature, Release) get no branch and are never dispatched.
@@ -51,12 +53,12 @@ Present the grouping, the working branch, the promotion branch and its environme
 
 ## 3. Dispatch
 
-For each approved group spawn one `fix-agent` with `isolation: "worktree"`. At most three agents run at the same time, or the number the user gave ("max 5", "one at a time"). Each agent costs tokens and machine load at once, so the default stays modest. Start the first independent groups in one turn, up to the limit, and start the next group in dispatch order as each agent finishes. The prompt is the full brief: repo path, working branch, branch name, commit and PR title format, and "Report using your completion format." Hold dependent groups until their prerequisite PR is merged into the working branch.
+For each approved group spawn one `fix-agent` with `isolation: "worktree"`. At most three agents run at the same time, or the number the user gave ("max 5", "one at a time"). Each agent costs tokens and machine load at once, so the default stays modest. Start the first independent groups in one turn, up to the limit, and start the next group in dispatch order as each agent finishes. The prompt is the full brief: repo path, working branch, branch name, commit and PR title format, the path of `codemap.py` when the repo has a map, and "Report using your completion format." Hold dependent groups until their prerequisite PR is merged into the working branch.
 
 ## 4. Integrate (per group, in dispatch order)
 
 1. **Validate the PR.** It targets the working branch, follows the branch and title conventions, links every issue, and matches the group's scope. CI and reviews are green. Acceptance criteria are met: read the diff, do not trust the report. No secrets or unrelated changes. Migration, rollback, compatibility and observability are addressed.
-2. **Ask to merge.** "Group G-nn is ready. May I merge PR #n into `<working branch>`?" Include the title, linked issues, test results and residual risks. Never merge without approval.
+2. **Ask to merge.** "Group G-nn is ready. May I merge PR #n into `<working branch>`?" Include the title, linked issues, test results and residual risks. Never merge without approval. After the merge the map describes code that changed: when the checkout is on the working branch and has no local changes, pull and run `codemap.py ensure <repo root>`, so the groups that waited on this one and the re-review see the merged code. Otherwise leave it for the next stage's `ensure`.
 3. **Promote.** Open or update the PR from the working branch into the promotion branch, with the same traceability. Ask before merging it, and say which environment it deploys. When the promotion branch is production, say so plainly. Never promote with failing checks, conflicts, unreviewed migrations or unverified criteria.
 4. **Verify after promotion.** Deploy completed; health checks; smoke or integration tests; expected logs, metrics and alerts present; original failure no longer reproducible where practical; no new error pattern; migrations and jobs completed. Record evidence, timestamp, commit SHA and limitations.
 5. **Comment on each resolved issue** with the block in `references/agent-brief.md`.
