@@ -36,10 +36,10 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import scorecard as sc  # noqa: E402
 
-ITEM_ID = re.compile(r"\b(F-(?:ARC|BE|FE|UX|SEC)-\d+|[XAGT]-\d+)\b")
-ITEM_HEAD = re.compile(r"^(F-(?:ARC|BE|FE|UX|SEC)-\d+|[XAGT]-\d+)\b\s*(?:\[([^\]]+)\])?\s*[—–:-]?\s*(.*)$")
+ITEM_ID = re.compile(r"\b(F-(?:ARC|BE|FE|UX|SEC|DB)-\d+|[XAGT]-\d+)\b")
+ITEM_HEAD = re.compile(r"^(F-(?:ARC|BE|FE|UX|SEC|DB)-\d+|[XAGT]-\d+)\b\s*(?:\[([^\]]+)\])?\s*[—–:-]?\s*(.*)$")
 SEVERITY = {"critical": "critical", "high": "serious", "medium": "warning", "p0": "critical", "p1": "serious", "p2": "warning"}
-LENS = {"ARC": "architecture", "BE": "backend", "FE": "front end", "UX": "UX", "SEC": "security"}
+LENS = {"ARC": "architecture", "BE": "backend", "FE": "front end", "UX": "UX", "SEC": "security", "DB": "database"}
 TITLES = {"code-map": "Code Map", "review": "Design Review", "conflicts": "Fix Conflicts", "plan": "Action Plan",
           "tickets": "Remediation Tickets", "dispatch": "Fix Dispatch", "rereview": "Design Re-review"}
 

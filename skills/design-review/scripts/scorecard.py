@@ -25,9 +25,9 @@ import sys
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
-LENSES = ["architecture", "backend", "frontend", "ux", "security"]
-FINDING = re.compile(r"^#{2,4}\s*(F-(?:ARC|BE|FE|UX|SEC)-\d+)\s*\[(Critical|High|Medium|Low|Informational)", re.M | re.I)
-FINDING_ID = re.compile(r"F-(?:ARC|BE|FE|UX|SEC)-\d+")
+LENSES = ["architecture", "backend", "frontend", "ux", "security", "database"]
+FINDING = re.compile(r"^#{2,4}\s*(F-(?:ARC|BE|FE|UX|SEC|DB)-\d+)\s*\[(Critical|High|Medium|Low|Informational)", re.M | re.I)
+FINDING_ID = re.compile(r"F-(?:ARC|BE|FE|UX|SEC|DB)-\d+")
 CONFIDENCE = re.compile(r"\*\*Confidence\*\*\s*:?\s*([^\n·|]*)", re.I)
 HEADER = re.compile(r"^\|\s*Aspect\s*\|\s*Grade\s*\|", re.I)
 
@@ -119,7 +119,7 @@ def lens_name(path, text):
         return m.group(1)
     ids = FINDING_ID.findall(text)
     code = ids[0].split("-")[1] if ids else ""
-    return {"ARC": "architecture", "BE": "backend", "FE": "frontend", "UX": "ux", "SEC": "security"}.get(code, path.stem)
+    return {"ARC": "architecture", "BE": "backend", "FE": "frontend", "UX": "ux", "SEC": "security", "DB": "database"}.get(code, path.stem)
 
 
 def main(argv):
