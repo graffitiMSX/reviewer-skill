@@ -44,7 +44,7 @@ Every High or Critical finding needs a numbered scenario and at least one file p
 ### F-BE-nnn [Severity] Short title
 - **Confidence** · **Category**: idempotency | consistency | concurrency | performance | resilience | api | provider | testing
 - **Evidence** · **Affected flow** · **Failure scenario** (numbered steps: precondition, trigger, interleaving or timing, wrong outcome) · **Impact**
-- **Why existing controls are insufficient** · **Recommended remediation** · **Verification** · **Residual risk**
+- **Why existing controls are insufficient** · **Recommended remediation** · **Verification** · **Residual risk** · **Decision** (when one applies: ID, then accepted | drift | revisit)
 ```
 
 Severity: Critical (severe data loss, irreversible financial impact, prolonged outage) · High (material corruption, duplicate business side effects, major outage under realistic conditions) · Medium (localized, recoverable) · Low (defense in depth) · Informational (trade-off). Rate realistic impact, not theory.

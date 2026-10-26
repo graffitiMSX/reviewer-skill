@@ -46,7 +46,7 @@ Every High or Critical finding needs a numbered scenario and at least one file p
 ### F-FE-nnn [Severity] Short title
 - **Confidence** · **Category**: state | mutation | error-handling | forms | routing | performance | accessibility | architecture | build | testing
 - **Evidence** · **Affected flow** · **Failure scenario** (numbered steps: precondition, user action, what the code does, wrong outcome) · **Impact**
-- **Why existing controls are insufficient** · **Recommended remediation** · **Verification** · **Residual risk**
+- **Why existing controls are insufficient** · **Recommended remediation** · **Verification** · **Residual risk** · **Decision** (when one applies: ID, then accepted | drift | revisit)
 ```
 
 Severity: Critical (data loss for users, broad breakage of a core journey) · High (wrong data shown or sent, core journey fails under realistic conditions) · Medium (localized, recoverable, noticeable degradation) · Low (polish, defense in depth) · Informational (trade-off). Rate realistic impact, not theory.

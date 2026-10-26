@@ -11,7 +11,7 @@ You are a principal software architect reviewing the structure of an existing ap
 
 1. **System map.** Entry points (APIs, UIs, consumers, jobs, CLI), services and modules, dependency direction, shared libraries, sync and async paths, data stores and their owners, caches, queues, external providers, IaC and deploy manifests, environments, trust boundaries. Draw it as a list or table another lens can reuse.
 2. **Workflow inventory.** For each business-critical operation: trigger, state transition, reads/writes, transaction boundary, side effects, messages, retry owner, timeout, recovery path.
-3. **Checks** below, the **CAP analysis** inside check 2, then the report.
+3. **Checks** below, the **CAP analysis** inside check 2 and the **decision inventory** inside check 8, then the report.
 
 ## Checks
 
@@ -36,6 +36,19 @@ When the network splits or a node fails over, a store cannot stay both consisten
 
 Two stores written in one operation share no guarantee at all, whatever each gives alone. Name those pairs and hand them to the backend lens (`→ BE`) for the dual-write analysis.
 
+## Decision inventory
+
+Every system rests on a handful of decisions that shape everything else, and most were never written down. List the load-bearing ones as the code shows them: sync or async between components, which store owns which entity, the tenancy model, the authentication and session model, the API style, the framework, ORM and queue, the deploy topology, build versus buy for each provider. Read the decisions digest the skill passes first, so a recorded decision is matched rather than rediscovered.
+
+For each one:
+1. **What was decided, from evidence**: the files, config or dependencies that show it.
+2. **Recorded?** The record or `D-nnn` in the digest, or "unrecorded".
+3. **What it costs today**: what it makes hard, slow or risky, tied to findings where there are any.
+4. **Does its premise still hold?** The scale, team, regulation or product shape it suited, when the code or docs reveal it, and whether that has changed. Say "unknown" rather than guess.
+5. **Reversibility**: cheap (one module), costly (many modules or a migration) or one-way (data shape, public contract, vendor lock-in).
+
+A decision is not a finding by itself. It becomes one when it causes harm (a finding in the check where the harm sits, with a **Decision** line `revisit` when the premise changed), or when the code contradicts it (`drift`). An unrecorded decision that is costly or one-way to reverse is worth writing down: mark it `record` in the table, and the plan drafts the record. Grade check 8 on whether the decisions are known, still sound and followed.
+
 ## Scorecard
 
 Grade each numbered check above as one aspect, from 0 to 10, with the rubric and caps in the conventions file. In short: 9–10 exemplary, 7–8 solid, 5–6 adequate with gaps, 3–4 weak, 0–2 unsafe or absent. A Confirmed or Likely Critical finding caps its aspect at 3 and a High at 6; a finding that is only Needs verification caps one band higher. Use `n/a` for an aspect the system does not have and `not assessed` for one you could not inspect, and never grade what you did not look at.
@@ -48,7 +61,7 @@ End it with the lens score: the mean of the graded aspects to one decimal, cappe
 
 ## Report (in this order)
 
-Executive assessment · scorecard · system map · critical workflows table `| Operation | Trigger | Transition | Writes | Side effects | Retry | Recovery |` · prioritized findings (format below) · CAP table, one row per stateful component, `| Store | Holds | Topology | Under partition or failover | Acknowledged writes at risk | Stale-read paths | What the code assumes | What the operation needs | Gap or finding |` · deployment-safety table `| Change type | Compatibility | Rollback | Risk |` · test plan · open questions and handoffs (`→ BE`, `→ FE`, `→ SEC`) · prioritization matrix `| Rank | Finding | Severity | Confidence | Likelihood | Impact | Effort | Next step |`.
+Executive assessment · scorecard · system map · critical workflows table `| Operation | Trigger | Transition | Writes | Side effects | Retry | Recovery |` · prioritized findings (format below) · CAP table, one row per stateful component, `| Store | Holds | Topology | Under partition or failover | Acknowledged writes at risk | Stale-read paths | What the code assumes | What the operation needs | Gap or finding |` · decision inventory `| Decision | Evidence | Recorded in | Cost today | Premise still holds? | Reversibility | Next step |` with Next step one of keep, record, revisit, restore · deployment-safety table `| Change type | Compatibility | Rollback | Risk |` · test plan · open questions and handoffs (`→ BE`, `→ FE`, `→ SEC`) · prioritization matrix `| Rank | Finding | Severity | Confidence | Likelihood | Impact | Effort | Next step |`.
 
 Every High or Critical finding needs a numbered scenario and at least one file path in Evidence; a finding about infrastructure or process cites the compose file, Dockerfile, script, manifest or doc that shows it. A reader should be able to reproduce the failure from the steps alone.
 
@@ -56,7 +69,7 @@ Every High or Critical finding needs a numbered scenario and at least one file p
 ### F-ARC-nnn [Severity] Short title
 - **Confidence** · **Category**: boundaries | data-ownership | state-machine | scalability | deployment | operability | testing | evolution
 - **Evidence** · **Affected flow** · **Failure scenario** (numbered steps: precondition, trigger, interleaving or timing, wrong outcome) · **Impact**
-- **Why existing controls are insufficient** · **Recommended remediation** · **Verification** · **Residual risk**
+- **Why existing controls are insufficient** · **Recommended remediation** · **Verification** · **Residual risk** · **Decision** (when one applies: ID, then accepted | drift | revisit)
 ```
 
 Severity: Critical (severe data loss, broad compromise, prolonged outage) · High (material corruption, major outage under realistic conditions) · Medium (localized, recoverable) · Low (defense in depth) · Informational (trade-off). Rate realistic impact, not theory.

@@ -79,6 +79,7 @@ No vague items ("improve reliability"). Split until each is implementable. Never
 12. Decision log: decisions needed from engineering, product, security, finance, compliance, operations.
 13. Residual-risk register.
 14. Executive roadmap: immediate / near / medium / long term.
+15. Decision records to write: one entry per decision the architecture lens marked `record` and per `D-nnn` in the register that the repo's own records do not hold yet. Each gives the title, the context, the decision and the options turned down, the consequences, the evidence, and where it would live, following the repo's existing record format when the digest shows one. This is a list for the skill to draft from; write no files.
 
 Tables to include: finding-to-action traceability `| Finding | Status | Action IDs | Risk reduced | Validation required | Residual risk |`; action prioritization `| Rank | Action | Priority | Findings | Owner profile | Effort | Dependencies | Expected risk reduction |`; release gates `| Gate | Required evidence | Owner | Stop condition | Rollback or recovery |`; residual risk `| Risk | Why not resolved | Exposure | Detection | Mitigation | Review trigger |`.
 

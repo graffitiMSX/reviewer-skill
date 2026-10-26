@@ -46,7 +46,7 @@ Every High or Critical finding needs a numbered scenario and at least one file p
 ### F-UX-nnn [Severity] Short title
 - **Confidence** · **Category**: flow | navigation | feedback | error-recovery | copy | consistency | onboarding | responsive | accessibility | trust
 - **Evidence** (screen, route, component, string) · **Affected flow** · **User scenario** (numbered steps from the user's seat: where they are, what they try, what they see, where they get stuck) · **Impact** (abandonment, errors, support load, trust, time on task)
-- **Why the current design does not prevent it** · **Recommended change** · **Verification** (usability task, metric, A/B or heuristic recheck) · **Residual risk**
+- **Why the current design does not prevent it** · **Recommended change** · **Verification** (usability task, metric, A/B or heuristic recheck) · **Residual risk** · **Decision** (when one applies: ID, then accepted | drift | revisit)
 ```
 
 Severity: Critical (users cannot complete a core task or lose work) · High (core task fails or misleads under realistic conditions, irreversible actions without safeguards) · Medium (noticeable friction, confusion, avoidable errors) · Low (polish) · Informational (opportunity). Rate realistic impact on real users, not preference.

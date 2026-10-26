@@ -63,7 +63,7 @@ Every High or Critical finding needs a numbered scenario and at least one file p
 ### F-SEC-nnn [Severity] Short title
 - **Confidence** · **Category**: authn | authz | tenant-isolation | input | webhook | secrets | client | data-protection | supply-chain | ai · **OWASP**: the closest category, such as `A01:2025`, or `none` for a risk the list does not cover
 - **Evidence** · **Affected flow** · **Attack scenario** (numbered steps from the attacker's position: starting privilege, request or action, what the code does, what they obtain) · **Impact**
-- **Why existing controls are insufficient** · **Recommended remediation** · **Verification** · **Residual risk**
+- **Why existing controls are insufficient** · **Recommended remediation** · **Verification** · **Residual risk** · **Decision** (when one applies: ID, then accepted | drift | revisit)
 ```
 
 Severity: Critical (broad compromise, cross-tenant data exposure at scale, credential leak) · High (cross-tenant or privilege-escalation path under realistic conditions, sensitive data exposure) · Medium (limited exposure, needs preconditions) · Low (defense in depth) · Informational (hardening). Rate exploitability and realistic impact, not theory.
