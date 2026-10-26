@@ -21,6 +21,7 @@ It reads reports and code and writes one file. It never edits the lens reports, 
    Cross-check the design review of the application at <repo root>.
    Lens reports: <paths>. Shared-paths list: <path>.
    Code map: <map folder and `<code-map skill's directory>/scripts/codemap.py`, refreshed with `ensure` just before, or "none">. `impact <file>` shows what else a fix to that file reaches.
+   Recorded decisions: <path to the decisions digest, collected as in /design-review into docs/remediation/work/conflicts/decisions.md>. A conflict a recorded decision already settles resolves the way the decision says.
    Context from the user: <constraints or priorities they stated, or "none">.
    Conventions: read <design-review skill's directory>/references/conventions.md first.
    Write your complete report to <output path>. Reply with only the summary, the conflict table and the decisions for the team.
@@ -31,7 +32,7 @@ It reads reports and code and writes one file. It never edits the lens reports, 
    python3 <this skill's directory>/scripts/conflicts.py check docs/remediation/design-review-conflicts.md docs/remediation
    ```
    It exits non-zero when a conflict cites a finding that does not exist, lacks a resolution, or when the fix orders of all conflicts together form a cycle. Send those back to the agent; do not rewrite a resolution yourself.
-5. **Present** the conflict table, any conflict marked live first since it is a defect in the code today, then the decisions that need the user, each with its options. Those are theirs to make: do not choose for them, and do not plan around an undecided one. Offer `/action-plan` next, which picks up the conflicts file. Once the user settles a decision, offer `/design-memory` to save it, so later reviews here and in other projects find it.
+5. **Present** the conflict table, any conflict marked live first since it is a defect in the code today, then the decisions that need the user, each with its options. Those are theirs to make: do not choose for them, and do not plan around an undecided one. Offer `/action-plan` next, which picks up the conflicts file. Once the user settles a decision, append it to `docs/remediation/decisions.md` as the next `D-nnn`, in the format under "Decision IDs" in the conventions file, with this conflict as its source, and read the entry back to the user. Then offer `/design-memory` to save a copy, so other projects find it.
 
 ## Human artifacts
 
@@ -42,6 +43,6 @@ Follow "Human artifacts" in `../design-review/references/conventions.md`; it is 
 - `scripts/conflicts.py check` exits zero: every conflict names existing findings, has a resolution, and the fix orders contain no cycle.
 - Every conflict states the concrete collision in the code or contract, and what happens when both fixes are applied as written.
 - No finding is dropped by a resolution: a `prefer` says what the other finding gets instead.
-- Trade-offs the code cannot settle are `decision`, with options, and are shown to the user.
+- Trade-offs the code cannot settle are `decision`, with options, and are shown to the user. Conflicts a recorded decision settles are resolved as it says, and each answer the user gave is in the register as a `D-nnn`.
 - Identical fixes asked for by several findings are listed under plan once. Pairs that were checked and found compatible are listed, and a result of no conflicts is reported as such.
 - The run record exists in `docs/remediation/work/conflicts/` and `pages/conflicts.html` was rendered from the final artifact.

@@ -32,3 +32,5 @@ Search the active tier first and the lower tiers after it, since older memories 
 ## Decisions across projects
 
 A decision from one project reaches another only when it is tagged so a search finds it: add the topic (auth, queues, data store, consistency, deploy) and the kind of system it applies to. When starting work in a new project, search for decisions on the topics at hand and present them as precedent, not as rules: the new project's own `AGENTS.md` wins.
+
+In a repo running the remediation pipeline, a settled decision's record of truth is its `D-nnn` entry in `docs/remediation/decisions.md`; memory holds a copy that points to it, so a review elsewhere can find it.

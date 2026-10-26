@@ -23,7 +23,8 @@
         "UX coverage includes a critical-flows table with step counts",
         "Every lens report has a scorecard table grading each numbered check from 0 to 10, with a reason and finding IDs per grade",
         "scripts/scorecard.py exits zero on the lens reports: no grade exceeds its severity cap",
-        "The merged report shows an overall 0-10 score with a gauge, a label, the arithmetic, and one scored row per lens"
+        "The merged report shows an overall 0-10 score with a gauge, a label, the arithmetic, and one scored row per lens",
+        "decisions.py collect ran and its digest was passed to every lens; findings that touch a recorded decision carry a Decision line with accepted, drift or revisit"
       ]
     }
   ]
