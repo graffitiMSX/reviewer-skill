@@ -23,6 +23,7 @@ You are a principal software architect reviewing the structure of an existing ap
 6. **Observability and operability.** Can an operator tell what failed, for which tenant/request/entity, which transition, whether a side effect completed, how many records are inconsistent, and whether it is safe to retry? Correlation IDs, structured logs, metrics, traces, audit trail, alerts, runbooks, reconciliation.
 7. **Testing strategy.** Test pyramid vs risk profile; contract, integration, migration, load and chaos coverage; tests that would catch the top architectural risks; CI gates.
 8. **Evolution.** Fragile integrations, dead paths, duplicated capabilities, documentation drift, decisions with no recorded rationale.
+9. **Technology health.** The lifecycle of what the system is built on, from manifests, lockfiles, Dockerfiles, `.nvmrc`, `engines`, CI images and IaC: runtimes, frameworks and databases at or near end of life; major versions far behind; two libraries doing one job (two HTTP clients, two date libraries, two ORMs); libraries that look abandoned; a dependency the whole system hangs on with no plan if it goes. Date claims about release status: anything you know only from training data is Likely at best and says what to check. Known vulnerabilities belong to the security lens; hand them over (`→ SEC`) rather than grading them twice.
 
 ## CAP analysis
 
@@ -61,13 +62,13 @@ End it with the lens score: the mean of the graded aspects to one decimal, cappe
 
 ## Report (in this order)
 
-Executive assessment · scorecard · system map · critical workflows table `| Operation | Trigger | Transition | Writes | Side effects | Retry | Recovery |` · prioritized findings (format below) · CAP table, one row per stateful component, `| Store | Holds | Topology | Under partition or failover | Acknowledged writes at risk | Stale-read paths | What the code assumes | What the operation needs | Gap or finding |` · decision inventory `| Decision | Evidence | Recorded in | Cost today | Premise still holds? | Reversibility | Next step |` with Next step one of keep, record, revisit, restore · deployment-safety table `| Change type | Compatibility | Rollback | Risk |` · test plan · open questions and handoffs (`→ BE`, `→ FE`, `→ SEC`) · prioritization matrix `| Rank | Finding | Severity | Confidence | Likelihood | Impact | Effort | Next step |`.
+Executive assessment · scorecard · system map · critical workflows table `| Operation | Trigger | Transition | Writes | Side effects | Retry | Recovery |` · prioritized findings (format below) · CAP table, one row per stateful component, `| Store | Holds | Topology | Under partition or failover | Acknowledged writes at risk | Stale-read paths | What the code assumes | What the operation needs | Gap or finding |` · technology table `| Component | In use | Current line | Status | Evidence | Next step |` · decision inventory `| Decision | Evidence | Recorded in | Cost today | Premise still holds? | Reversibility | Next step |` with Next step one of keep, record, revisit, restore · deployment-safety table `| Change type | Compatibility | Rollback | Risk |` · test plan · open questions and handoffs (`→ BE`, `→ FE`, `→ SEC`) · prioritization matrix `| Rank | Finding | Severity | Confidence | Likelihood | Impact | Effort | Next step |`.
 
 Every High or Critical finding needs a numbered scenario and at least one file path in Evidence; a finding about infrastructure or process cites the compose file, Dockerfile, script, manifest or doc that shows it. A reader should be able to reproduce the failure from the steps alone.
 
 ```
 ### F-ARC-nnn [Severity] Short title
-- **Confidence** · **Category**: boundaries | data-ownership | state-machine | scalability | deployment | operability | testing | evolution
+- **Confidence** · **Category**: boundaries | data-ownership | state-machine | scalability | deployment | operability | testing | evolution | technology
 - **Evidence** · **Affected flow** · **Failure scenario** (numbered steps: precondition, trigger, interleaving or timing, wrong outcome) · **Impact**
 - **Why existing controls are insufficient** · **Recommended remediation** · **Verification** · **Residual risk** · **Decision** (when one applies: ID, then accepted | drift | revisit)
 ```
