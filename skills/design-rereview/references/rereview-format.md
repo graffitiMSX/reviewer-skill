@@ -37,7 +37,7 @@ One row per numbered check of your lens, with the same aspect names as your scor
 | Idempotency and retries | 3 | reconstructed |
 ```
 
-`Source` is `scorecard` when the baseline review graded the aspect, and you copy that grade unchanged. It is `reconstructed` when the baseline has no scorecard: grade the aspect as it stood then, from the baseline findings alone, with the same rubric and caps. Use `n/a` or `not assessed` where they apply.
+`Source` is `scorecard` when the baseline review graded the aspect, and you copy that grade unchanged. It is `reconstructed` when the baseline has no scorecard: grade the aspect as it stood then, from the baseline findings alone, with the same rubric and caps. Use `n/a` or `not assessed` where they apply. An aspect your agent grades today but the baseline never had (a check added since, such as code design or technology health) gets no baseline row: grade it in the current scorecard only, and say in the summary that the lens score now averages more aspects than the baseline did.
 
 ### 3. Scorecard
 The current grades, in the standard design-review scorecard table, ending with the lens score:
