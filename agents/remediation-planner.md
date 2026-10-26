@@ -37,7 +37,7 @@ IDs `A-001`, `A-002`, … Every item:
 
 ```
 ### A-nnn Title
-- **Related findings**: F-<LENS>-nnn (ARC | BE | FE | UX | SEC)
+- **Related findings**: F-<LENS>-nnn (ARC | BE | DB | FE | UX | SEC)
 - **Priority**: P0 / P1 / P2 / P3 · **Effort**: XS / S / M / L / XL (state assumptions)
 - **Risk addressed** · **Action type**: containment | discovery | code | schema | infra | security | observability | testing | migration | operations | docs
 - **Owner profile**: backend | frontend | platform | database | security | SRE | QA | product | cross-functional

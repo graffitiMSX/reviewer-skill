@@ -7,7 +7,7 @@ flowchart LR
     repo[(Target repo)] --> s1
     repo -.-> m["0 · /code-map<br/>the code as a graph"]
     m -.->|code-map/| s1
-    s1["1 · /design-review<br/>five lenses, graded 0–10"] -->|design-review.md| s2
+    s1["1 · /design-review<br/>six lenses, graded 0–10"] -->|design-review.md| s2
     s1 -.->|lens reports| r["/design-reconcile<br/>contradicting fixes"]
     r -.->|design-review-conflicts.md| s2
     s2["2 · /action-plan"] -->|action-plan.md| s3
@@ -21,12 +21,12 @@ flowchart LR
 | Stage | Skill | Agents | Reads | Writes |
 |---|---|---|---|---|
 | 0 | `/code-map` (optional) | none; one script | repo | `code-map/`: `graph.json` plus views of modules, entry points, data and front end |
-| 1 | `/design-review [lenses]` | `architecture-reviewer`, `backend-reviewer`, `frontend-reviewer`, `ux-reviewer`, `security-reviewer` (read-only, run in parallel, three at a time by default) | repo | `design-review.md`, merged from one file per lens; findings `F-ARC/BE/FE/UX/SEC-nnn` |
+| 1 | `/design-review [lenses]` | `architecture-reviewer`, `backend-reviewer`, `database-reviewer`, `frontend-reviewer`, `ux-reviewer`, `security-reviewer` (read-only, run in parallel, three at a time by default) | repo | `design-review.md`, merged from one file per lens; findings `F-ARC/BE/FE/UX/SEC-nnn` |
 | 1b | `/design-reconcile` (optional) | `conflict-reviewer` (read-only) | lens reports + repo | `design-review-conflicts.md`; conflicts `X-nnn`, each with a resolution or a decision for the team |
 | 2 | `/action-plan` | `remediation-planner` (read-only) | review, conflicts if present, repo | `action-plan.md`; actions `A-nnn` |
 | 3 | `/plan-to-issues` | `ticket-writer` (drafts only) | plan | `tickets.md`; tickets `T-nn`, then GitHub issues |
 | 4 | `/dispatch-fixes` | `fix-agent` × N (one per group, own worktree, three at a time by default) | open issues + plan | `dispatch.md`; groups `G-nn`, branches, PRs |
-| 5 | `/design-rereview [lenses]` | the same five reviewers (read-only, three at a time by default) | earlier review + current code | `design-rereview-<date>.md`; a status for every earlier finding, grades before and after |
+| 5 | `/design-rereview [lenses]` | the same six reviewers (read-only, three at a time by default) | earlier review + current code | `design-rereview-<date>.md`; a status for every earlier finding, grades before and after |
 
 Every stage also leaves a run record in `docs/remediation/work/<stage>/` (what ran, on which commit, every intermediate output and each gate result) and a page for people in `docs/remediation/pages/<stage>.html`: the whole artifact with folding sections, cross-linked IDs and filterable tables, under a dashboard of scores, counts and graphs. `skills/design-review/scripts/page.py` renders it from the artifact, so no model writes it, and each skill offers to publish it as a private claude.ai Artifact.
 
@@ -53,12 +53,13 @@ The map is extracted by pattern, so it gives a file and line to open, not a prov
 
 ## Stage 1: design review
 
-`/design-review` runs one agent per lens, each writing its own report, then merges them into a single document with one prioritization matrix. Pass lens names to narrow it: `/design-review security`, `/design-review backend frontend`. With no argument it runs all five and skips `frontend` and `ux` when the repo has no client code.
+`/design-review` runs one agent per lens, each writing its own report, then merges them into a single document with one prioritization matrix. Pass lens names to narrow it: `/design-review security`, `/design-review backend frontend`. With no argument it runs all six, skipping `frontend` and `ux` when the repo has no client code and `database` when it keeps no data of its own.
 
 | Lens | Covers |
 |---|---|
 | `architecture` | boundaries, coupling, data ownership, CAP analysis of each data store, state machines, scalability shape, deployment safety, operability, test strategy, decision inventory, technology health (end of life, majors behind, duplicate libraries) |
 | `backend` | idempotency, dual writes, concurrency, performance, resilience, queues, API contracts, code design (layering, duplicated rules, competing patterns, swallowed errors) |
+| `database` | schema and modelling, constraints behind invariants, indexes against the queries the code runs, query shape, isolation and locking, migration safety, growth and retention, pooling and backups |
 | `frontend` | client code: state and data flow, submits, error states, forms, routing, performance, accessibility implementation, build config |
 | `ux` | the experience: task flows and friction, navigation, feedback, error recovery, copy, consistency, onboarding, responsive behavior, trust |
 | `security` | authn, authz, tenant isolation, input handling, webhooks, secrets, client security, data protection, supply chain, AI risks, OWASP Top 10 coverage |
@@ -106,7 +107,7 @@ Install the hook in `~/.claude/settings.json` under `hooks.SessionStart`:
 
 ```
 .claude-plugin/plugin.json   plugin manifest
-agents/                      nine subagent definitions (frontmatter + system prompt)
+agents/                      ten subagent definitions (frontmatter + system prompt)
 skills/<name>/SKILL.md       eight skills, each with references/, scripts/ and evals/ as needed
 harness/minify/              the minify harness: hooks, CLI, output style, tests
 AGENTS.md                    instructions for coding agents working in this repo

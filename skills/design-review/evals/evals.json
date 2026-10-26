@@ -29,6 +29,20 @@
         "The backend lens grades Code design, and each code-design finding names the prevailing pattern the outliers depart from",
         "The architecture lens grades Technology health with a technology table; release-status claims are dated or marked Likely, and known vulnerabilities are handed to security"
       ]
+    },
+    {
+      "id": 1,
+      "prompt": "/design-review database no AssinAi em /home/alexmarra/projects/rudolf/assinai — quero saber se o schema, os índices e as migrations aguentam.",
+      "expected_output": "One database lens report, F-DB-nnn findings, graded on nine aspects, labelled partial.",
+      "files": [],
+      "assertions": [
+        "Only the database-reviewer ran and the score is labelled partial",
+        "The data inventory has a row per table with keys, constraints, indexes, tenant key and growth, taken from migrations or models",
+        "Index findings name the query they serve, with file and line, not a generic checklist",
+        "Migration findings name the migration file and the lock or rewrite it causes",
+        "Races, CAP questions and injection are handed off (→ BE, → ARC, → SEC) rather than graded here",
+        "scripts/scorecard.py exits zero on the report"
+      ]
     }
   ]
 }
