@@ -15,13 +15,14 @@ It is cheaper than a full review because each lens starts from the earlier findi
    - **Baseline commit.** Use the commit the report names in its header. Failing that, use the commit that first added the report (`git log --diff-filter=A --format=%H -- <report> | tail -1`). Failing that, ask. State which one you used and why.
    - **Current code.** The branch the team ships from, not whatever happens to be checked out. If other sessions use the checkout, review a clean worktree of that branch.
    - **Lenses.** Those the user named, limited to lenses the baseline actually covered. A lens with no baseline cannot be compared; offer a fresh `/design-review <lens>` for it.
-2. **Scope the change.** `git log --oneline <baseline>..<current>` and `git diff --stat <baseline>..<current>`. A map from before the fixes describes code that no longer exists, so refresh it from the current code with `codemap.py ensure <path of the current code>`; when that is a separate worktree, add `-o docs/remediation/code-map` with the checkout's path so the map lands next to the other artifacts and not in the worktree. Give each lens the list of changed paths in its area. Closed issues and merged pull requests are useful pointers to where a fix should be, and nothing more.
+2. **Scope the change.** `git log --oneline <baseline>..<current>` and `git diff --stat <baseline>..<current>`. A map from before the fixes describes code that no longer exists, so refresh it from the current code with `codemap.py ensure <path of the current code>`; when that is a separate worktree, add `-o docs/remediation/code-map` with the checkout's path so the map lands next to the other artifacts and not in the worktree. Collect the decisions the reviewers must respect: `python3 <design-review skill's directory>/scripts/decisions.py collect <repo root> -o docs/remediation/work/rereview/decisions.md`. It lists the repo's decision records, the instruction files that carry decisions, the register `docs/remediation/decisions.md` and the decisions still open, and exits 1 on a malformed register entry; fix the entry with the user before going on. Then search `/design-memory` for decisions on this repo and on the topics in scope, and append what it finds under `## From memory`, each with where it came from. Memory from other projects is precedent, not a constraint; mark it so. A finding the team accepted by decision since the baseline gets the status `Accepted`, citing it. Give each lens the list of changed paths in its area. Closed issues and merged pull requests are useful pointers to where a fix should be, and nothing more.
 3. **Run the lenses in parallel, three at a time.** At most three agents run at the same time, or the number the user gave ("max 5", "one at a time"). Each agent costs tokens and machine load at once, so the default stays modest. With more lenses than the limit, start the first batch in one turn and start the next lens as each one finishes. One Agent call per lens with that lens's reviewer agent (`architecture-reviewer`, `backend-reviewer`, `frontend-reviewer`, `ux-reviewer`, `security-reviewer`), each writing `docs/remediation/rereview-<date>/design-rereview-<lens>.md`:
    ```
    Re-review the <lens> lens of the application at <path>, read-only.
    Baseline review: <path to the merged report or the lens file>, your lens's section. Baseline commit: <sha>. Current code: <branch> at <sha>.
    Changed since the baseline in your area: <paths, or "see git diff --stat <baseline>..<current>">.
    Code map: <map folder and `<code-map skill's directory>/scripts/codemap.py`, refreshed in step 2 from the current code, or "none">.
+   Recorded decisions: <path to the decisions digest>. Read "Recorded decisions" in the conventions file before grading.
    Read <this skill's directory>/references/rereview-format.md and <design-review skill's directory>/references/conventions.md first, and follow the format exactly.
    Write your report to <output path>. Reply with only the summary, the baseline grades, the current scorecard and the finding status table.
    ```
@@ -54,12 +55,13 @@ It is cheaper than a full review because each lens starts from the earlier findi
 
 ## Human artifacts
 
-Follow "Human artifacts" in `../design-review/references/conventions.md`; it is part of the stage, not an extra. Keep the run record in `docs/remediation/work/rereview/`: `run.md`, plus `scope.md` (the commit range, `git log --oneline` and `git diff --stat`), `prompts.md` and `comparison.md` (the comparison script's output). When the gate passes, render the page with `page.py rereview docs/remediation`, tell the user where it is, and ask whether to publish it.
+Follow "Human artifacts" in `../design-review/references/conventions.md`; it is part of the stage, not an extra. Keep the run record in `docs/remediation/work/rereview/`: `run.md`, plus `decisions.md`, `scope.md` (the commit range, `git log --oneline` and `git diff --stat`), `prompts.md` and `comparison.md` (the comparison script's output). When the gate passes, render the page with `page.py rereview docs/remediation`, tell the user where it is, and ask whether to publish it.
 
 ## Quality gate
 
 - `scripts/compare.py` exits zero.
 - Every baseline finding in each lens has exactly one status with current evidence; every Fixed cites the code that proves it.
 - New findings and regressions are listed, or the lens says it looked and found none.
+- `decisions.py collect` exited zero; every `Accepted` status cites a recorded decision, and findings that touch a decision carry a **Decision** line.
 - The merged report carries the script's comparison unchanged and states the baseline and current commits.
 - The run record exists in `docs/remediation/work/rereview/` and `pages/rereview.html` was rendered from the final artifact.

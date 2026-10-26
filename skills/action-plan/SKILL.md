@@ -16,12 +16,13 @@ Stage 2 of the remediation pipeline. Reads `docs/remediation/design-review.md` (
    Review report: <path>
    Conflict report: <path, or "none">
    Code map: <map folder and `<code-map skill's directory>/scripts/codemap.py`, refreshed with `ensure` just before, or "none">
+   Recorded decisions: <path to the decisions digest, collected as in /design-review into docs/remediation/work/plan/decisions.md>
    Constraints from the user: <list, or "none given">
    Normalize the findings, validate the High and Critical ones against the code, then write the complete action plan to <output path>. Reply with only the executive action summary, the containment plan and the action prioritization table.
    ```
    If the Agent tool is unavailable, read `../../agents/remediation-planner.md` (relative to this skill) and follow it yourself.
 3. **Check the plan** against the gate below; send gaps back to the agent.
-4. **Present** the summary, the first-week actions and the decision log (what stakeholders must decide before some actions can start). Offer `/plan-to-issues` as the next stage, and `/design-memory` for each decision the stakeholders settle.
+4. **Present** the summary, the first-week actions and the decision log (what stakeholders must decide before some actions can start). Offer `/plan-to-issues` as the next stage. Each decision the stakeholders settle goes into `docs/remediation/decisions.md` as the next `D-nnn`, as in `/design-reconcile`, and the actions it blocked are updated; offer `/design-memory` for a copy other projects can find.
 
 ## Human artifacts
 
@@ -35,4 +36,5 @@ Follow "Human artifacts" in `../design-review/references/conventions.md`; it is 
 - Unknowns became time-boxed discovery tasks; no invented incidents, volumes, owners or deadlines.
 - When a conflict report exists, every `X-nnn` is reflected: its resolved remediation is what the plan builds, its order is respected, and each `decision` is in the decision log blocking the actions that depend on it.
 - The traceability table maps every `F-<LENS>-nnn` to `A-nnn` IDs.
+- No action reverses a recorded decision: `accepted` findings carry no action and appear with their revisit condition, `drift` findings have an action that restores the decision, and `revisit` findings are decision-log entries.
 - The run record exists in `docs/remediation/work/plan/` and `pages/plan.html` was rendered from the final artifact.

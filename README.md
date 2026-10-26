@@ -71,6 +71,10 @@ Each lens works alone, so two lenses can prescribe fixes that cannot both hold: 
 
 `skills/design-reconcile/scripts/conflicts.py candidates` lists the paths cited by more than one finding as a starting point, and `check` refuses to pass when a conflict cites a finding that does not exist, has no resolution, or when the fix orders of all conflicts together form a cycle. `/action-plan` reads the conflicts file when it is there and plans the resolved remediation instead of both sides.
 
+## Recorded decisions
+
+A review that does not know what the team decided re-flags deliberate trade-offs, the plan reverses them, and the next review flags the reversal. Every stage that reads code therefore starts from a decisions digest written by `skills/design-review/scripts/decisions.py collect`: the repo's ADR-style records, the instruction files that carry decisions, the register `docs/remediation/decisions.md`, and the decisions still open, plus what `/design-memory` finds. A finding that touches a decision says how: `accepted` (the risk the decision took on, reported at its real severity but not planned), `drift` (the code broke the decision, so the fix restores it) or `revisit` (the decision's premise changed, so it goes back to the team with options). When the user answers a `decision` conflict or an entry of the plan's decision log, the skill appends it to the register as a `D-nnn`, so the next review starts from it.
+
 ## Stages 2 to 4
 
 - **`/action-plan`** normalizes the findings, validates the High and Critical ones against the code, scores risk transparently, and produces a four-layer plan (containment, near-term, hardening, long-term) of implementation-ready work items with tests, rollout, rollback and observability.

@@ -17,12 +17,13 @@ Stage 1 of the remediation pipeline. Runs one or more lenses and produces `docs/
 
 ## Steps
 
-1. **Pick lenses and target.** Use the lenses the user named; default to all five, but drop `frontend` and `ux` when the repo has no client code and say so. Confirm repo root, focus area and output path (default above; create the folder). Note anything the user already knows (incidents, hot spots, missing telemetry) to pass on verbatim. When a code map exists, refresh it with `python3 ../code-map/scripts/codemap.py ensure <repo root>` (path relative to this skill), as "Keeping it current" in the conventions describes. When there is none, offer to run `/code-map` first: it takes seconds to minutes and saves every lens the same discovery work. Carry on without one if the user prefers.
+1. **Pick lenses and target.** Use the lenses the user named; default to all five, but drop `frontend` and `ux` when the repo has no client code and say so. Confirm repo root, focus area and output path (default above; create the folder). Note anything the user already knows (incidents, hot spots, missing telemetry) to pass on verbatim. When a code map exists, refresh it with `python3 ../code-map/scripts/codemap.py ensure <repo root>` (path relative to this skill), as "Keeping it current" in the conventions describes. When there is none, offer to run `/code-map` first: it takes seconds to minutes and saves every lens the same discovery work. Carry on without one if the user prefers. Collect the decisions the reviewers must respect: `python3 scripts/decisions.py collect <repo root> -o docs/remediation/work/review/decisions.md`. It lists the repo's decision records, the instruction files that carry decisions, the register `docs/remediation/decisions.md` and the decisions still open, and exits 1 on a malformed register entry; fix the entry with the user before going on. Then search `/design-memory` for decisions on this repo and on the topics in scope, and append what it finds under `## From memory`, each with where it came from. Memory from other projects is precedent, not a constraint; mark it so.
 2. **Run the lenses in parallel, three at a time.** At most three agents run at the same time, or the number the user gave ("max 5", "one at a time"). Each agent costs tokens and machine load at once, so the default stays modest. With more lenses than the limit, start the first batch in one turn and start the next lens as each one finishes. One Agent call per lens, each writing its own file `docs/remediation/design-review-<lens>.md`:
    ```
    Review the application at <repo root>. Focus: <area, or "whole system">.
    Context from the user: <notes or "none">.
    Code map: <map folder and `<code-map skill's directory>/scripts/codemap.py`, or "none">.
+   Recorded decisions: <path to the decisions digest>. Read "Recorded decisions" in the conventions file before grading.
    Conventions: read <this skill's directory>/references/conventions.md first.
    Write your complete lens report to <lens output path>. Reply with only the executive assessment, the scorecard and the prioritization matrix.
    ```
@@ -49,7 +50,7 @@ Stage 1 of the remediation pipeline. Runs one or more lenses and produces `docs/
 
 ## Human artifacts
 
-Follow "Human artifacts" in `references/conventions.md`; it is part of the stage, not an extra. Keep the run record in `docs/remediation/work/review/`: `run.md`, plus `prompts.md` (the prompt sent to each lens agent), `scorecard.md` (the scorecard script's output, including any problems it listed) and `gate.md`. When the gate passes, render the page with `page.py review docs/remediation`, tell the user where it is, and ask whether to publish it.
+Follow "Human artifacts" in `references/conventions.md`; it is part of the stage, not an extra. Keep the run record in `docs/remediation/work/review/`: `run.md`, plus `prompts.md` (the prompt sent to each lens agent), `scorecard.md` (the scorecard script's output, including any problems it listed), `decisions.md` (the digest the lenses read) and `gate.md`. When the gate passes, render the page with `page.py review docs/remediation`, tell the user where it is, and ask whether to publish it.
 
 ## Quality gate
 
@@ -59,4 +60,5 @@ Follow "Human artifacts" in `references/conventions.md`; it is part of the stage
 - Handoffs between lenses were followed up, not dropped.
 - Scorecard: `scripts/scorecard.py` exits zero, so no grade exceeds its cap and every grade has a reason. Every numbered check of every lens that ran appears with a grade, `n/a` or `not assessed`. The merged report carries the script's output unchanged, and a run of fewer than five lenses is labelled partial.
 - Strengths listed; no secrets reproduced.
+- `decisions.py collect` exited zero. Every finding that touches a recorded decision carries a **Decision** line, every lens has its decisions table, and no finding asks to override a decision without the relation `revisit` and the evidence for it.
 - The run record exists in `docs/remediation/work/review/` and `pages/review.html` was rendered from the final artifact.
